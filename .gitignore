@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ORCA DLL (large binary, not in repo)
+orca/*.dll
+orca/*.so
+orca/*.dylib
+
+# PB exported sources (working files)
+exported/
+pb-workflow/
+
+# Snapshot metadata
+.pb-snapshots/
+
+# OS
+Thumbs.db
+.DS_Store

@@ -1,0 +1,116 @@
+{
+  "name": "powerscript",
+  "displayName": "PowerScript (PowerBuilder)",
+  "description": "PowerScript language support for PowerBuilder .sr* source files — syntax highlighting, semantic validation, hover docs, and code completion.",
+  "version": "1.0.0",
+  "publisher": "pb-devkit",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "keywords": [
+    "PowerBuilder",
+    "PowerScript",
+    "PBL",
+    "legacy",
+    "syntax highlighting"
+  ],
+  "activationEvents": [
+    "onLanguage:powerscript"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "powerscript",
+        "aliases": ["PowerScript", "PowerBuilder", "powerscript"],
+        "extensions": [
+          ".srw", ".sru", ".srd", ".srf", ".srm",
+          ".sra", ".srs", ".srq", ".srp", ".srj",
+          ".srx", ".sre", ".src"
+        ],
+        "filenames": [],
+        "firstLine": "^\\$PBExportHeader\\$",
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "powerscript",
+        "scopeName": "source.powerscript",
+        "path": "./syntaxes/powerscript.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "PowerScript",
+      "properties": {
+        "powerscript.maxRoutineLines": {
+          "type": "number",
+          "default": 200,
+          "description": "Maximum routine lines before warning (routine_too_long)"
+        },
+        "powerscript.maxComplexity": {
+          "type": "number",
+          "default": 20,
+          "description": "Cyclomatic complexity threshold (high_complexity)"
+        },
+        "powerscript.maxNesting": {
+          "type": "number",
+          "default": 4,
+          "description": "Maximum nesting depth (deep_nesting)"
+        },
+        "powerscript.enableLinting": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time PowerScript linting"
+        },
+        "powerscript.enableEmptyCatchCheck": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check for empty CATCH blocks"
+        },
+        "powerscript.enableSelectStarCheck": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check for SELECT * in DataWindows"
+        },
+        "powerscript.enableGlobalVariableCheck": {
+          "type": "boolean",
+          "default": true,
+          "description": "Report global variable usage"
+        },
+        "powerscript.enableDeprecatedCheck": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check for deprecated PowerBuilder function calls"
+        },
+        "powerscript.enableHardcodedSqlCheck": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check for hardcoded SQL statements"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "powerscript.runLint",
+        "title": "PowerScript: Run Lint on Current File"
+      },
+      {
+        "command": "powerscript.runLintDirectory",
+        "title": "PowerScript: Run Lint on Directory"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "echo 'No build step needed (pure JS)'",
+    "lint": "echo 'No linter configured'"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^2.0.0",
+    "vscode": "^1.1.37"
+  }
+}

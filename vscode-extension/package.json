@@ -109,6 +109,10 @@
     "vscode:prepublish": "echo 'No build step needed (pure JS)'",
     "lint": "echo 'No linter configured'"
   },
+  "repository": {
+    "type": "git",
+    "url": "http://10.0.0.80:8880/r/AI/pb-devkit.git"
+  },
   "devDependencies": {
     "@vscode/vsce": "^2.0.0",
     "vscode": "^1.1.37"

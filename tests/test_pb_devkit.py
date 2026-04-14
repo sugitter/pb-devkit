@@ -66,6 +66,59 @@ class TestPBLSource(unittest.TestCase):
             source="café".encode("latin-1"))
         self.assertIn("café", src.source_text)
 
+    def test_source_text_utf16le(self):
+        """PB12+ PBL stores DAT* source data as UTF-16LE without BOM."""
+        pb_source = "$PBExportHeader$w_main.srw\nforward\nglobal type w_main from window\nend type"
+        raw = pb_source.encode("utf-16-le")
+        src = PBLSource(
+            entry=PBLEntry(name="w_main", object_type=PBObjectType.WINDOW),
+            source=raw)
+        text = src.source_text
+        self.assertIn("w_main", text)
+        self.assertIn("forward", text)
+
+    def test_source_text_utf16le_chinese(self):
+        """PB12+ UTF-16LE with Chinese characters."""
+        pb_source = "$PBExportHeader$w_main.srw\nforward\n// 中文注释\nglobal type w_main from window"
+        raw = pb_source.encode("utf-16-le")
+        src = PBLSource(
+            entry=PBLEntry(name="w_main", object_type=PBObjectType.WINDOW),
+            source=raw)
+        text = src.source_text
+        self.assertIn("中文注释", text)
+
+    def test_to_utf8_bytes_from_utf16le(self):
+        """to_utf8_bytes() should convert UTF-16LE PB source to UTF-8."""
+        # PB12 source starts with "Export By" or "$PBExportHeader$"
+        pb_source = "$PBExportHeader$w_main.srw\nforward\nglobal type w_main from window\nHello"
+        raw = pb_source.encode("utf-16-le")
+        src = PBLSource(
+            entry=PBLEntry(name="w_main.srw", object_type=PBObjectType.WINDOW),
+            source=raw)
+        result = src.to_utf8_bytes()
+        # Should be valid UTF-8 without null bytes
+        decoded = result.decode("utf-8")
+        self.assertIn("$PBExportHeader$", decoded)
+        self.assertIn("w_main", decoded)
+        self.assertNotIn(b"\x00", result)
+
+    def test_to_utf8_bytes_from_utf8(self):
+        """to_utf8_bytes() should pass through UTF-8 unchanged."""
+        original = "Hello 世界".encode("utf-8")
+        src = PBLSource(
+            entry=PBLEntry(name="test", object_type=PBObjectType.WINDOW),
+            source=original)
+        result = src.to_utf8_bytes()
+        self.assertEqual(result, original)
+
+    def test_source_text_short_bytes(self):
+        """source_text should handle very short byte sequences gracefully."""
+        src = PBLSource(
+            entry=PBLEntry(name="test", object_type=PBObjectType.WINDOW),
+            source=b"\x00\x01")
+        text = src.source_text
+        self.assertIsInstance(text, str)
+
 
 class TestSRFileParser(unittest.TestCase):
     SAMPLE_WINDOW = textwrap.dedent("""\

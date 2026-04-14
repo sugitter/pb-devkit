@@ -26,8 +26,8 @@ def run(args):
         sys.exit(1)
 
     # Collect files
-    files1 = {f.name: f for f in dir1.glob("*.sr*")}
-    files2 = {f.name: f for f in dir2.glob("*.sr*")}
+    files1 = {f.name: f for f in dir1.rglob("*.sr*")}
+    files2 = {f.name: f for f in dir2.rglob("*.sr*")}
 
     all_names = sorted(set(files1.keys()) | set(files2.keys()))
 

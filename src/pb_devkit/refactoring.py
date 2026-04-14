@@ -303,7 +303,7 @@ class RefactoringEngine:
         all_results: list[FixResult] = []
         files_modified = []
 
-        files = [source_path] if source_path.is_file() else sorted(source_path.glob("*.sr*"))
+        files = [source_path] if source_path.is_file() else sorted(source_path.rglob("*.sr*"))
 
         for f in files:
             if not f.is_file():

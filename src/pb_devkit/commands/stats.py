@@ -27,7 +27,7 @@ def run(args):
         print(f"Error: not a directory: {source_dir}", file=sys.stderr)
         sys.exit(1)
 
-    files = sorted(source_dir.glob("*.sr*"))
+    files = sorted(source_dir.rglob("*.sr*"))
     if not files:
         print("No .sr* files found in directory.", file=sys.stderr)
         sys.exit(1)

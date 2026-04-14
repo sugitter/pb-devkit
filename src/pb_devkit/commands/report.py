@@ -30,7 +30,7 @@ def run(args):
     summary = report["summary"]
 
     # Collect file-level stats
-    files = sorted(source_dir.glob("*.sr*"))
+    files = sorted(source_dir.rglob("*.sr*"))
     file_stats = []
     for f in files:
         obj = SRFileParser().parse_file(f)

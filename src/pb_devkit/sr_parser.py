@@ -309,7 +309,7 @@ class PBSourceAnalyzer:
 
     def analyze_directory(self, d: Path) -> dict[str, list[dict]]:
         d = Path(d)
-        return {f.name: self.analyze_file(f) for f in sorted(d.glob("*.sr*"))}
+        return {f.name: self.analyze_file(f) for f in sorted(d.rglob("*.sr*"))}
 
     def analyze_object(self, obj: PBSourceObject) -> list[dict]:
         issues = []
@@ -467,7 +467,7 @@ class PBSourceAnalyzer:
 
     def analyze_project(self, source_dir: Path) -> dict:
         """Full project analysis with dependency graph."""
-        files = list(source_dir.glob("*.sr*"))
+        files = list(source_dir.rglob("*.sr*"))
         objects = [SRFileParser().parse_file(f) for f in files]
 
         # Quality issues

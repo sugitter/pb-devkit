@@ -168,6 +168,7 @@ class PBLParser:
 
     def _parse_nod(self, base_off):
         """Parse a NOD* B-tree node block."""
+        sz = self._fh.seek(0, 2)
         data = self._read(base_off, 8 * BLOCK)  # Read up to 8 blocks (4096b)
         if data[:4] != b"NOD*":
             return

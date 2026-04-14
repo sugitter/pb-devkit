@@ -225,7 +225,14 @@ class PBLParser:
         logger.debug("Header size: %d, unicode: %s", self._header_size, self._is_unicode)
 
     def _parse(self):
-        """Parse all entries by traversing NOD* B-tree."""
+        """Parse all entries by traversing NOD* B-tree.
+
+        Algorithm ported from PbdViewer (PbFile.cs) which has been verified
+        against real PB9-PB12.6 PBL files. Key differences from the old approach:
+        - Sequential reads by entry_count, no signature scanning
+        - NOD* header is 32 bytes (not 24), entries start at byte 32
+        - name_len field includes ENT* marker + version bytes, must subtract
+        """
         file_size = self._fh.seek(0, 2)
 
         # NOD* starts after HDR* + FRE*
@@ -238,6 +245,13 @@ class PBLParser:
         visited = set()
         current_offset = nod_start
 
+        # Pre-calculate ENT* header sizes (matching PbdViewer's num2/num3)
+        # ANSI: num=1, num2=4+1*4=8, num3=8+16=24
+        # Unicode: num=2, num2=4+2*4=12, num3=12+16=28
+        num = 2 if self._is_unicode else 1
+        num2 = 4 + num * 4          # offset of data fields within ENT*
+        num3 = num2 + 16            # fixed ENT* header size
+
         while current_offset > 0 and current_offset not in visited:
             visited.add(current_offset)
             if current_offset + NODE_BLOCK_SIZE > file_size:
@@ -249,91 +263,95 @@ class PBLParser:
                 logger.warning("No NOD* signature at offset %d, got %r", current_offset, nod_data[:4] if nod_data else b"")
                 break
 
-            # Parse NOD* header (24 bytes)
-            # Bytes 0-3:   "NOD*"
-            # Bytes 4-7:   left child offset
-            # Bytes 8-11:  parent offset
-            # Bytes 12-15: right child offset (next NOD*)
-            # Bytes 16-17: space left
-            # Bytes 18-19: position of first object name
-            # Bytes 20-21: entry count
-            # Bytes 22-23: position of last object name
-            # Bytes 24-32: reserved (8 bytes)
-            # Bytes 33+:   ENT* chunks
+            # Parse NOD* header
+            # PbdViewer reads 32 bytes: NOD*(4) + left(4) + parent(4) + right(4) + ?(16)
+            # entry_count is at byte offset 20 within the NOD* block
             entry_count = struct.unpack_from("<H", nod_data, 20)[0]
             right_offset = struct.unpack_from("<I", nod_data, 12)[0]
 
             logger.debug("NOD* at %d: %d entries, right=%d",
                          current_offset, entry_count, right_offset)
 
-            # Parse ENT* entries starting at byte 33 within NOD*
-            # (offset 8 = 33 - 24 for first_name_position - header_end)
-            chunk = nod_data[24:]  # skip NOD* 24-byte header
-            pos = 8  # first entry starts at chunk[8] = nod_data[32], but actual entries start at byte 33
+            # Sequential read: entries start at byte 32 (after 32-byte NOD* header)
+            # This matches PbdViewer's approach exactly
+            pos_in_nod = 32
 
-            # According to the spec, entries start at byte 33
-            # chunk starts at byte 24, so first entry is at chunk[9] = byte 33
-            # But reference implementation uses start_pos = 8 (within chunk starting at byte 24)
-            # That means byte 32 in the NOD* block. Let's use byte 33 as spec says.
-            # Actually looking at gmai2006: start_pos = 8, chunk = lst[8] = NODE_BLOCK_SIZE - 20 bytes starting at byte 20
-            # Wait, let me re-read: attributes = [4, 4, 4, 4, 2, 2, 2, 2, NODE_BLOCK_SIZE - 20]
-            # So chunk = data[20:20+NODE_BLOCK_SIZE-20] = data[20:3052] = bytes 20-3052
-            # start_pos = 8, meaning entries start at chunk[8] = byte 28
-            # But byte 24-32 is reserved, and spec says entries at byte 33...
-            # Let me just use the reference implementation's approach:
-            # Read the raw NOD* data and extract entries using the spec format
-
-            # Re-parse from scratch using correct offsets
-            pos_in_nod = 24  # skip 24-byte NOD* header
-            # Skip reserved bytes 24-32 (9 bytes), entries start at byte 33
-            # Actually, the reference code reads 20 bytes of header (4+4+4+4+2+2+2+2=24)
-            # then the remaining NODE_BLOCK_SIZE-20=3052 bytes is the chunk
-            # start_pos=8 means entries start at chunk[8] = NOD* offset 28
-            # But the spec clearly says byte 33... Let me check again.
-            #
-            # Spec says:
-            # 1-4: NOD*, 5-8: left, 9-12: parent, 13-16: right
-            # 17-18: space, 19-20: first_pos, 21-22: count, 23-24: last_pos
-            # 33-xx: ENT* chunks
-            # Bytes 25-32 are reserved/padding
-            #
-            # Reference code: attributes = [4,4,4,4,2,2,2,2, NODE_BLOCK_SIZE-20]
-            # This reads: 4+4+4+4+2+2+2+2 = 24 bytes header
-            # Then chunk = remaining 3052 bytes starting at offset 24
-            # start_pos = 8 means entries start at chunk[8] = absolute offset 32
-            # This is off-by-one from spec's byte 33.
-            # The discrepancy is 1 byte. Let me search for ENT* signature instead.
-
-            # Robust approach: scan for first ENT* in the NOD* block
-            ent_pos = nod_data.find(b"ENT*", 24)
-            if ent_pos < 0:
-                # No entries in this NOD* block
-                current_offset = right_offset
-                continue
-
-            pos_in_nod = ent_pos
             for _ in range(entry_count):
-                if pos_in_nod + 20 > len(nod_data):
+                if pos_in_nod + num3 > len(nod_data):
+                    logger.debug("  Ran out of NOD* data at pos %d", pos_in_nod)
                     break
 
+                # Read ENT* fixed header (num3 bytes)
+                ent_header = nod_data[pos_in_nod:pos_in_nod + num3]
+
                 # Verify ENT* signature
-                if nod_data[pos_in_nod:pos_in_nod+4] != b"ENT*":
-                    # Try to find next ENT*
-                    next_ent = nod_data.find(b"ENT*", pos_in_nod + 1)
-                    if next_ent < 0:
-                        break
-                    pos_in_nod = next_ent
+                if ent_header[:4] != b"ENT*":
+                    logger.debug("  No ENT* at pos %d, got %r", pos_in_nod, ent_header[:4])
+                    break
+
+                # Verify version string
+                version_str = ent_header[4:4 + num * 4]
+                if self._is_unicode:
+                    ver_text = version_str.decode("utf-16-le", errors="replace")
+                else:
+                    ver_text = version_str.decode("ascii", errors="replace")
+                if ver_text not in ("0500", "0600"):
+                    logger.debug("  Unexpected version %r at pos %d", ver_text, pos_in_nod)
+                    break
+
+                # Parse fixed fields
+                data_offset = struct.unpack_from("<I", ent_header, num2)[0]
+                obj_size = struct.unpack_from("<I", ent_header, num2 + 4)[0]
+                raw_ts = struct.unpack_from("<I", ent_header, num2 + 8)[0]
+                # PbdViewer: only ONE ushort at num2+14 = name buffer length
+                # (includes ENT* marker + version bytes as prefix)
+                name_buf_len = struct.unpack_from("<H", ent_header, num2 + 14)[0]
+
+                # Read name buffer
+                name_buf_start = pos_in_nod + num3
+                name_buf_end = name_buf_start + name_buf_len
+                if name_buf_end > len(nod_data):
+                    logger.debug("  Name buffer overflow at pos %d, buf_len=%d", pos_in_nod, name_buf_len)
+                    break
+
+                name_buf = nod_data[name_buf_start:name_buf_end]
+
+                # Decode name: name_buf_len includes version bytes, so strip them
+                # PbdViewer: Project.GetString(buffer2, 0, uShort2 - num)
+                actual_name_len = name_buf_len - num
+                if actual_name_len <= 0:
+                    pos_in_nod = name_buf_end
                     continue
 
                 if self._is_unicode:
-                    entry, new_pos = self._parse_ent_unicode(nod_data, pos_in_nod)
+                    name = name_buf[:actual_name_len].decode("utf-16-le", errors="replace")
                 else:
-                    entry, new_pos = self._parse_ent_ansi(nod_data, pos_in_nod)
+                    name = name_buf[:actual_name_len].decode("latin-1", errors="replace")
+                name = name.rstrip("\x00").strip()
 
-                if entry is None:
-                    break
+                # PbdViewer: after reading name buffer, position moves to next ENT*
+                pos_in_nod = name_buf_end
 
-                # Validate
+                # Timestamp
+                ts = raw_ts
+                if ts > 3_000_000_000:
+                    ts = ts // 1000
+                try:
+                    t = datetime.fromtimestamp(ts, tz=timezone.utc) if ts > 0 else datetime(2000, 1, 1, tzinfo=timezone.utc)
+                except (OSError, OverflowError, ValueError):
+                    t = datetime(2000, 1, 1, tzinfo=timezone.utc)
+
+                # Detect type
+                if self._is_unicode:
+                    ot = self._detect_type_from_name_ext(name, "")
+                else:
+                    ot = self._detect_type(name, "")
+
+                entry = PBLEntry(name=name, object_type=ot, comment="",
+                                 first_data_offset=data_offset, data_size=obj_size,
+                                 creation_time=t)
+
+                # Validate and deduplicate
                 if entry.first_data_offset > 0 and entry.data_size > 0:
                     if entry.first_data_offset <= file_size and entry.data_size <= 10_000_000:
                         if not any(x.name == entry.name for x in self.entries):
@@ -342,139 +360,9 @@ class PBLParser:
                                          entry.name, entry.object_type,
                                          entry.first_data_offset, entry.data_size)
 
-                pos_in_nod = new_pos
-
             current_offset = right_offset
 
         logger.info("Total entries parsed: %d", len(self.entries))
-
-    def _parse_ent_ansi(self, nod_data: bytes, pos: int) -> tuple[Optional[PBLEntry], int]:
-        """Parse an ANSI ENT* entry within a NOD* block.
-
-        ANSI ENT* format (Arnd Schmidt spec):
-        Bytes 0-3:   "ENT*" (Char 4)
-        Bytes 4-7:   PBL version (Char 4, e.g. "0600")
-        Bytes 8-11:  First data block offset (Long)
-        Bytes 12-15: Object size (Long)
-        Bytes 16-19: Unix datetime (Long)
-        Bytes 20-21: Comment length (Integer)
-        Bytes 22-23: Object name length (Integer)
-        Bytes 24+:   Object name (String, name_len bytes)
-        After name:  Comment (String, comment_len bytes)
-
-        Total fixed: 24 bytes + name_len + comment_len
-        """
-        if pos + 24 > len(nod_data):
-            return None, pos + 1
-
-        # Parse fixed fields
-        version = nod_data[pos+4:pos+8]
-        data_offset = struct.unpack_from("<I", nod_data, pos + 8)[0]
-        obj_size = struct.unpack_from("<I", nod_data, pos + 12)[0]
-        raw_ts = struct.unpack_from("<I", nod_data, pos + 16)[0]
-        comment_len = struct.unpack_from("<H", nod_data, pos + 20)[0]
-        name_len = struct.unpack_from("<H", nod_data, pos + 22)[0]
-
-        if name_len == 0 or name_len > 256:
-            return None, pos + 24
-
-        name_end = pos + 24 + name_len
-        if name_end > len(nod_data):
-            return None, pos + 24
-
-        name = nod_data[pos+24:name_end].decode("latin-1", errors="replace").strip()
-        new_pos = name_end
-
-        # Read comment if present
-        comment = ""
-        if comment_len > 0 and new_pos + comment_len <= len(nod_data):
-            comment = nod_data[new_pos:new_pos+comment_len].decode("latin-1", errors="replace")
-            new_pos += comment_len
-
-        # Timestamp: divide by 1000 if it looks like milliseconds (PB uses seconds)
-        ts = raw_ts
-        if ts > 3_000_000_000:  # Likely milliseconds
-            ts = ts // 1000
-
-        try:
-            t = datetime.fromtimestamp(ts, tz=timezone.utc) if ts > 0 else datetime(2000, 1, 1, tzinfo=timezone.utc)
-        except (OSError, OverflowError, ValueError):
-            t = datetime(2000, 1, 1, tzinfo=timezone.utc)
-
-        ot = self._detect_type(name, comment)
-        entry = PBLEntry(name=name, object_type=ot, comment=comment,
-                         first_data_offset=data_offset, data_size=obj_size,
-                         creation_time=t)
-        return entry, new_pos
-
-    def _parse_ent_unicode(self, nod_data: bytes, pos: int) -> tuple[Optional[PBLEntry], int]:
-        """Parse a Unicode ENT* entry within a NOD* block.
-
-        Unicode ENT* format (verified against PB12 PBL):
-        Bytes 0-3:   "ENT*" (Char 4)
-        Bytes 4-11:  PBL version (CharW 8, UTF-16LE, e.g. "0600")
-        Bytes 12-15: First data block offset (Long)
-        Bytes 16-19: Object size (Long)
-        Bytes 20-23: Unix datetime (Long)
-        Bytes 24-25: Comment length in bytes (Integer)
-        Bytes 26-27: Object name length in bytes (Integer)
-        Bytes 28+:   Object name (UTF-16LE, name_len bytes)
-        After name:  Comment (encoding varies, may be ANSI or UTF-16LE)
-
-        NOTE: The name field already includes the object extension (e.g. "w_main.win",
-        "d_emp.srw"), which serves as the definitive type indicator.
-
-        Total fixed: 28 bytes + name_len + comment_len
-        """
-        if pos + 28 > len(nod_data):
-            return None, pos + 1
-
-        # Parse fixed fields
-        data_offset = struct.unpack_from("<I", nod_data, pos + 12)[0]
-        obj_size = struct.unpack_from("<I", nod_data, pos + 16)[0]
-        raw_ts = struct.unpack_from("<I", nod_data, pos + 20)[0]
-        comment_len = struct.unpack_from("<H", nod_data, pos + 24)[0]
-        name_len = struct.unpack_from("<H", nod_data, pos + 26)[0]
-
-        if name_len == 0 or name_len > 512:
-            return None, pos + 28
-
-        name_end = pos + 28 + name_len
-        if name_end > len(nod_data):
-            return None, pos + 28
-
-        # Decode name as UTF-16LE, strip null bytes and whitespace
-        raw_name = nod_data[pos+28:name_end].decode("utf-16-le", errors="replace")
-        name = raw_name.rstrip("\x00").strip()
-        new_pos = name_end
-
-        # Read comment if present (may be ANSI or garbled)
-        comment = ""
-        if comment_len > 0 and new_pos + comment_len <= len(nod_data):
-            raw_comment = nod_data[new_pos:new_pos+comment_len]
-            # Try UTF-16LE first, fall back to ANSI
-            try:
-                comment = raw_comment.decode("utf-16-le", errors="replace").rstrip("\x00").strip()
-            except (UnicodeDecodeError, ValueError):
-                comment = raw_comment.decode("latin-1", errors="replace").rstrip("\x00").strip()
-            new_pos += comment_len
-
-        # Timestamp
-        ts = raw_ts
-        if ts > 3_000_000_000:
-            ts = ts // 1000
-
-        try:
-            t = datetime.fromtimestamp(ts, tz=timezone.utc) if ts > 0 else datetime(2000, 1, 1, tzinfo=timezone.utc)
-        except (OSError, OverflowError, ValueError):
-            t = datetime(2000, 1, 1, tzinfo=timezone.utc)
-
-        # Detect type from embedded extension in name (e.g. ".srw", ".win", ".dwo")
-        ot = self._detect_type_from_name_ext(name, comment)
-        entry = PBLEntry(name=name, object_type=ot, comment=comment,
-                         first_data_offset=data_offset, data_size=obj_size,
-                         creation_time=t)
-        return entry, new_pos
 
     def _detect_type_from_name_ext(self, name: str, comment: str) -> PBObjectType:
         """Detect object type from the extension embedded in the entry name.
@@ -520,6 +408,10 @@ class PBLParser:
             ".win": PBObjectType.WINDOW,
             ".dwo": PBObjectType.DATAWINDOW,
             ".prp": PBObjectType.MENU,
+            ".udo": PBObjectType.USEROBJECT,
+            ".fun": PBObjectType.FUNCTION,
+            ".str": PBObjectType.STRUCTURE,
+            ".apl": PBObjectType.APPLICATION,
         }
         for ext, otype in COMPILED_EXT.items():
             if nl.endswith(ext):

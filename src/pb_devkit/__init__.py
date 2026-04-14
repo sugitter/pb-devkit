@@ -33,7 +33,7 @@ CLI Usage:
     python pb.py stats <source_dir>
     python pb.py report <source_dir>
 """
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 # Parsers
 from .pbl_parser import (

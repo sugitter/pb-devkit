@@ -68,7 +68,8 @@ def _build_parser() -> argparse.ArgumentParser:
         run_import, run_build, run_compile,
         run_analyze, run_analyze_project, run_search,
         run_report, run_refactor, run_diff, run_workflow,
-        run_stats, run_snapshot,
+        run_stats, run_snapshot, run_decompile,
+        run_autoexport,
     )
 
     # Import command modules to trigger register() calls
@@ -77,6 +78,7 @@ def _build_parser() -> argparse.ArgumentParser:
         doctor, init, list as list_mod, export, import_,
         build, compile as compile_mod, analyze, analyze_project,
         search, report, refactor, diff, workflow, stats, snapshot,
+        decompile, autoexport,
     )
 
     doctor.register(sub)
@@ -95,6 +97,8 @@ def _build_parser() -> argparse.ArgumentParser:
     workflow.register(sub)
     stats.register(sub)
     snapshot.register(sub)
+    decompile.register(sub)
+    autoexport.register(sub)
 
     return parser
 
@@ -117,6 +121,8 @@ _COMMAND_MAP = {
     "workflow": "run_workflow",
     "stats": "run_stats",
     "snapshot": "run_snapshot",
+    "decompile": "run_decompile",
+    "autoexport": "run_autoexport",
 }
 
 

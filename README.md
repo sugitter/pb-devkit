@@ -1,10 +1,10 @@
 # PB DevKit - PowerBuilder Legacy System Toolkit
 
-> 不用打开 PowerBuilder IDE，在命令行完成 PBL 源码导出、分析、重构、搜索、报告、导入、编译全流程。
+> 不用打开 PowerBuilder IDE，在命令行完成 PBL 源码导出、反编译、分析、重构、搜索、报告、导入、编译全流程。
 > 适用于 PB4 ~ PB2025 全系列版本。
 >
 > **Python API**：`pip install` 无需，纯标准库实现（零外部依赖）。
-> **44 个单元测试全部通过**。
+> **68 个单元测试全部通过**。
 
 ## 为什么需要这个工具
 
@@ -42,8 +42,12 @@ python pb.py init F:\path\to\project --json
 # 1. 列出项目中所有 PBL 的对象
 python pb.py list F:\path\to\project
 
-# 2. 导出所有 PBL 源码
-python pb.py export F:\path\to\project ./src
+# 2. 导出所有 PBL 源码（推荐 --by-type 按类型分目录）
+python pb.py export F:\path\to\project ./src --by-type
+
+# 2a. 从 EXE 导出并按推断的 PBL 组织（推荐用于无 PBL 的场景）
+python pb.py export app.exe -o ./src --pbl-tree
+python pb.py export app.exe -o ./src --pbl-tree --project-name myapp
 
 # 3. 完整项目分析（依赖关系 + 复杂度 + 质量报告）
 python pb.py analyze-project ./src --json
@@ -62,7 +66,12 @@ python pb.py report ./src -o ./CODE_REVIEW.md
 # 7. 一键全流程
 python pb.py workflow F:\path\to\project\module.pbl --apply
 
-# 8. 导入修改后的源码（需要 PBSpyORCA.dll）
+# 8. 从 EXE/PBD 反编译回 PowerScript（无需源码）
+python pb.py decompile app.exe --list           # 列出所有可反编译的对象
+python pb.py decompile app.exe --output ./src   # 全量反编译，写入 .ps 文件
+python pb.py decompile app.exe --entry w_login  # 反编译单个对象
+
+# 9. 导入修改后的源码（需要 PBSpyORCA.dll）
 python pb.py import module.pbl ./src
 python pb.py build module.pbl appname
 ```
@@ -114,14 +123,18 @@ python pb.py build module.pbl appname --exe module.exe
 | `pb init <dir>` | 初始化项目（识别 PB 项目结构） | 否 |
 | `pb list <pbl_or_dir>` | 列出 PBL 中的对象 | 可选 |
 | `pb export <pbl_or_dir> [out]` | 导出 PBL 源码为 .sr* 文件 | 可选 |
+| `pb export ... --by-type` | 按对象类型分子目录导出（推荐） | 可选 |
+| `pb export <exe> -o <dir> --pbl-tree` | EXE/PBD 反编译并按 PBL 组织导出 | 否 |
 | `pb analyze <dir>` | 代码质量分析 | 否 |
-| `pb analyze-project <dir>` | 完整项目分析（依赖图+复杂度） | 否 |
+| `pb analyze-project <dir>` | 完整项目分析（依赖图+复杂度，自动检测 PBL tree） | 否 |
 | `pb search <pattern> <dir>` | 全文搜索（文本/SQL/函数） | 否 |
 | `pb stats <dir>` | 项目统计仪表盘 | 否 |
 | `pb report <dir>` | 生成 Markdown 分析报告 | 否 |
 | `pb refactor <dir>` | 自动重构（支持 dry-run） | 否 |
 | `pb diff <dir1> <dir2>` | 比较两份源码 | 否 |
 | `pb workflow <pbl> [dir]` | 全流程：导出→分析→重构 | 否 |
+| `pb snapshot <dir>` | 快照对比（保存/比较源码快照） | 否 |
+| `pb decompile <exe/pbd/pbl>` | **反编译** 编译产物回 PowerScript | 否 |
 | `pb import <pbl> <dir>` | 导入 .sr* 文件到 PBL | 是 |
 | `pb build <pbl> <app>` | 全量重建应用 | 是 |
 | `pb compile <pbl> <dir>` | 导入+重建一步完成 | 是 |
@@ -132,20 +145,25 @@ python pb.py build module.pbl appname --exe module.exe
 
 ```
 pb-devkit/
-├── pb.py                          # CLI 入口（15 个命令）
+├── pb.py                          # CLI 入口（18 个命令）
 ├── pyproject.toml                 # 包元数据
 ├── src/pb_devkit/
 │   ├── cli.py                     # pip install 后的 pb 命令入口
 │   ├── commands/                  # CLI 命令处理（每命令一文件）
 │   ├── pbl_parser.py              # PBL 二进制格式解析器（PB4-PB12+）
+│   ├── chunk_engine.py            # ChunkEngine 通用 PBL 解析引擎
+│   ├── pbl_grouper.py             # PBL 分组推断 + 结构化导出（--pbl-tree）
 │   ├── sr_parser.py               # .sr* 源码解析 + 分析
 │   ├── pborca_engine.py           # PBORCA DLL 封装（含优雅降级）
+│   ├── pe_extractor.py            # PE EXE/DLL → 提取内嵌 PBD
+│   ├── decompiler.py              # PBD/PBL/EXE 反编译 → PowerScript
+│   ├── resoures/                  # 反编译器资源（PB 类型定义 .bin）
 │   ├── refactoring.py             # 自动重构引擎（5 条规则）
 │   ├── config.py                  # 项目级配置（.pbdevkit.json）
 │   └── __init__.py                # 公共 API 导出
 ├── orca/                          # PBSpyORCA.dll（需手动下载）
 ├── tests/
-│   └── test_pb_devkit.py          # 44 个单元测试
+│   └── test_pb_devkit.py          # 68 个单元测试
 ├── SKILL.md                       # WorkBuddy Skill 描述
 ├── LICENSE                        # MIT License
 └── .gitignore
@@ -154,22 +172,30 @@ pb-devkit/
 ## 工作流程
 
 ```
-PBL (二进制库)
-  │
-  ├─[Python 解析器]──→ .sr* 文本文件 ──→ 编辑/搜索/重构/审查
-  │                                         │
-  │                    ┌────────────────────┤
-  │                    │                    │
-  │              analyze              refactor
-  │           (质量分析)           (自动修复)
-  │                    │                    │
-  │                    └────────────────────┤
-  │                                         │
-  └─[PBORCA DLL]────────────────────────────┘
-       │                              │
-       ├─ import → 写入 PBL           │
-       ├─ build → 全量编译             │
-       └─ build --exe → 生成 EXE      │
+PBL (二进制库)               EXE / PBD (编译产物)
+  │                                │
+  │                          [PEExtractor]
+  │                          [Decompiler]
+  │                                │
+  ├─[Python 解析器]──→ .sr*        ↓
+  │                   文本文件  .ps 文件 (PowerScript)
+  │                      │        │
+  │                      └────────┤
+  │                               │
+  │                         编辑/搜索/重构/审查
+  │                               │
+  │                    ┌──────────┤
+  │                    │          │
+  │              analyze      refactor
+  │           (质量分析)     (自动修复)
+  │                    │          │
+  │                    └──────────┤
+  │                               │
+  └─[PBORCA DLL]──────────────────┘
+       │
+       ├─ import → 写入 PBL
+       ├─ build → 全量编译
+       └─ build --exe → 生成 EXE
 ```
 
 ## 代码分析规则
@@ -214,6 +240,101 @@ PBL (二进制库)
 | .srp | Pipeline 管道 |
 | .srj | Project 工程 |
 
+## 推荐目录结构（--by-type）
+
+使用 `--by-type` 参数导出时，源码按 **PBL 文件 → 对象类型** 两层组织：
+
+```
+<project>/
+├── src/                              # 导出根目录
+│   ├── dgsauna/                      # ← PBL 文件名
+│   │   ├── application/              # ← 对象类型子目录
+│   │   │   └── dgsauna.sra
+│   │   ├── window/
+│   │   │   ├── w_main.srw
+│   │   │   ├── w_login.srw
+│   │   │   └── w_splash.srw
+│   │   ├── datawindow/
+│   │   │   ├── d_emp_list.srd
+│   │   │   └── d_report.srd
+│   │   ├── menu/
+│   │   │   └── m_main.srm
+│   │   ├── userobject/
+│   │   │   └── n_cst_service.sru
+│   │   ├── function/
+│   │   │   └── uf_print_grid.srf
+│   │   ├── structure/
+│   │   │   └── rect.srs
+│   │   └── project/
+│   │       └── dgsauna.srj
+│   ├── dgsauna01/                    # 另一个 PBL
+│   │   ├── window/
+│   │   ├── datawindow/
+│   │   └── ...
+│   └── libs/                         # 第三方库 PBL
+│       └── httpclient/
+│           └── ...
+└── pbl/                              # 原始 PBL/PBD（可选保留）
+```
+
+**设计要点：**
+
+| 决策 | 说明 |
+|------|------|
+| 第一层按 PBL 分 | 保留原始模块边界，与 PB .pbt 库列表一致 |
+| 第二层按类型分 | 每类 10-50 个对象，侧边栏清晰可导航 |
+| 文件名 = 对象名.扩展名 | 如 `w_main.srw`，同 PBL 内不会重名 |
+| import 自动递归 | `import` 命令默认扫描子目录，无需指定类型 |
+
+**类型子目录映射：**
+
+| 子目录名 | 包含的对象类型 |
+|----------|--------------|
+| application/ | .sra |
+| window/ | .srw |
+| datawindow/ | .srd |
+| menu/ | .srm |
+| function/ | .srf |
+| userobject/ | .sru |
+| structure/ | .srs |
+| query/ | .srq |
+| pipeline/ | .srp |
+| project/ | .srj |
+| proxy/ | .srx |
+| extension/ | .sre |
+
+> 不使用 `--by-type` 时，所有源码文件平铺在 PBL 子目录下。
+
+## PBL Tree 模式（--pbl-tree）
+
+当 EXE 编译时选择全内嵌模式（没有外部 PBL），所有对象合并到一个 PBD 中。`--pbl-tree` 模式会根据 PB 命名惯例自动推断原始 PBL 组织：
+
+```bash
+# 从 EXE 导出并按 PBL 组织
+python pb.py export app.exe -o ./src --pbl-tree --project-name myapp
+```
+
+输出结构：
+
+```
+src/
+├── myapp.pbl/              # 主业务模块（w_myapp_* 窗口）
+├── dw_myapp.pbl/           # 数据窗口对象（d_*）
+├── framework.pbl/          # 框架层（菜单、登录、启动窗口）
+├── common.pbl/             # 公共库（工具对象、用户对象、结构体）
+├── common_fun.pbl/         # 全局函数（uf_*, f_*）
+├── sys.pbl/                # 系统管理（w_sys_*, w_users）
+├── app.pbl/                # 应用入口
+└── README.md               # 自动生成的结构说明
+```
+
+基于 PBL tree 导出的源码可以直接用 `analyze-project` 分析，命令会自动检测 PBL 目录结构并按 PBL 分组报告：
+
+```bash
+python pb.py analyze-project ./src                     # 自动检测 PBL tree
+python pb.py analyze-project ./src --html report.html  # 生成 HTML 报告
+```
+
 ## 运行测试
 
 ```bash
@@ -230,6 +351,10 @@ with PBLParser("app.pbl") as parser:
     entries = parser.list_entries()
     sources = parser.export_all()
 
+# 导出并按类型分目录（推荐）
+with PBLParser("app.pbl") as parser:
+    parser.export_to_directory("./src", by_type=True)
+
 # 分析代码质量
 analyzer = PBSourceAnalyzer()
 issues = analyzer.analyze_directory("./exported")
@@ -240,6 +365,32 @@ results = engine.run("./exported", dry_run=True)
 
 # 加载项目配置
 config = PBConfig.load()
+
+# 从 EXE/PBD/PBL 反编译回 PowerScript（无需源码）
+from pb_devkit.decompiler import decompile_file, list_entries, DecompileResult
+
+# 列出所有可反编译对象
+entries = list_entries("app.exe")   # ['w_login.win', 'w_main.win', ...]
+
+# 反编译全部
+results = decompile_file("app.exe", decompile_all=True)
+for r in results:
+    if r.success:
+        print(r.entry_name, "->", len(r.source), "chars")
+
+# 反编译单个对象
+[r] = decompile_file("app.exe", entry_name="w_login")
+print(r.source)
+
+# EXE → PBL Tree 导出（自动推断 PBL 分组）
+from pb_devkit.pbl_grouper import export_pbl_tree, infer_pbl_groups
+
+# 全量导出：反编译 + 按 PBL 分组
+stats = export_pbl_tree("app.exe", "./src", project_name="myapp")
+print(f"Saved: {stats.total_saved}, PBLs: {list(stats.pbl_files.keys())}")
+
+# 仅推断分组（不导出）
+groups = infer_pbl_groups(["w_login.win", "d_orders.dwo", "uf_calc.fun"])
 ```
 
 ## AI Agent 集成

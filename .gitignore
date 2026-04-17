@@ -31,12 +31,22 @@ pb-workflow/
 # Snapshot metadata
 .pb-snapshots/
 
+# Resources (binary test data, not for repo)
+src/pb_devkit/resoures/
+
 # Build artifacts
 *.vsix
 node_modules/
 
 # IDEA build
 idea-plugin/build/
+
+# Temporary scripts (project-specific test/debug scripts at root)
+/debug_*.py
+/export_*.py
+/extract_*.py
+/test_*.py
+/build_*.py
 
 # OS
 Thumbs.db

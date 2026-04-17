@@ -27,13 +27,16 @@ Quick Start:
 
 CLI Usage:
     python pb.py init <project_dir>
-    python pb.py export <pbl_or_dir> [output]
-    python pb.py analyze-project <source_dir>
+    python pb.py export <pbl_or_exe> [output]          # PBL export or EXE decompile
+    python pb.py export <exe> --pbl-tree [output]      # Infer PBL grouping
+    python pb.py decompile <exe> --output ./src        # Decompile to .ps files
+    python pb.py analyze-project <source_dir>          # Auto-detect PBL tree
+    python pb.py analyze-project <src> --html report.html
     python pb.py search <pattern> <source_dir>
     python pb.py stats <source_dir>
     python pb.py report <source_dir>
 """
-__version__ = "1.3.0"
+__version__ = "1.5.0"
 
 # Parsers
 from .pbl_parser import (
@@ -75,6 +78,27 @@ from .refactoring import (
 # Configuration
 from .config import PBConfig
 
+# PE Extraction
+from .pe_extractor import PEExtractor, PBDResource
+
+# PBL Grouper
+from .pbl_grouper import (
+    PBLGroupStats,
+    infer_pbl_groups,
+    export_pbl_tree,
+    export_multi_pbl_tree,
+)
+
+# Chunk Engine
+from .chunk_engine import ChunkEngine, PBEntry
+
+# Project Detector
+from .project_detector import (
+    ProjectType,
+    ProjectInfo,
+    detect_project,
+)
+
 __all__ = [
     # Version
     "__version__",
@@ -90,4 +114,12 @@ __all__ = [
     "FixDeprecatedFunctionsRule", "FixLongRoutineRule",
     # Configuration
     "PBConfig",
+    # PE Extraction
+    "PEExtractor", "PBDResource",
+    # Chunk Engine
+    "ChunkEngine", "PBEntry",
+    # PBL Grouper
+    "PBLGroupStats", "infer_pbl_groups", "export_pbl_tree", "export_multi_pbl_tree",
+    # Project Detector
+    "ProjectType", "ProjectInfo", "detect_project",
 ]

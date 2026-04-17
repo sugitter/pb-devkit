@@ -38,13 +38,14 @@ def main():
             doctor, init, list as list_mod, export, import_,
             build, compile as compile_mod, analyze, analyze_project,
             search, report, refactor, diff, workflow, stats, snapshot,
+            decompile,
         )
         from pb_devkit.commands import (
             run_doctor, run_init, run_list, run_export,
             run_import, run_build, run_compile,
             run_analyze, run_analyze_project, run_search,
             run_report, run_refactor, run_diff, run_workflow,
-            run_stats, run_snapshot,
+            run_stats, run_snapshot, run_decompile,
         )
 
         parser = argparse.ArgumentParser(
@@ -74,6 +75,7 @@ def main():
         workflow.register(sub)
         stats.register(sub)
         snapshot.register(sub)
+        decompile.register(sub)
 
         args = parser.parse_args()
         if not args.command:
@@ -90,7 +92,7 @@ def main():
             "analyze-project": run_analyze_project, "search": run_search,
             "report": run_report, "refactor": run_refactor, "diff": run_diff,
             "workflow": run_workflow, "stats": run_stats,
-            "snapshot": run_snapshot,
+            "snapshot": run_snapshot, "decompile": run_decompile,
         }
 
         handler = _COMMAND_MAP.get(args.command)

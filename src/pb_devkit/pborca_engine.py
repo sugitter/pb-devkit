@@ -290,12 +290,19 @@ class PBORCAEngine:
             sb, len(sb), cb, len(cb))
         self._check(r, f"Import({entry_name})")
 
-    def import_from_directory(self, lib_path: str, source_dir: str) -> list:
-        """Import all .sr* files from directory into PBL."""
+    def import_from_directory(self, lib_path: str, source_dir: str,
+                              recursive: bool = True) -> list:
+        """Import all .sr* files from directory into PBL.
+
+        When recursive=True (default), scans subdirectories recursively.
+        This supports the --by-type export layout where files are organized
+        under type subdirectories (window/, datawindow/, menu/, etc.).
+        """
         src = Path(source_dir)
         imported = []
         errors = []
-        for f in sorted(src.glob("*.sr*")):
+        pattern = "**/*.sr*" if recursive else "*.sr*"
+        for f in sorted(src.glob(pattern)):
             tc = EXT_TO_TYPE.get(f.suffix.lower())
             if tc is None:
                 continue

@@ -1,89 +1,130 @@
 """PowerBuilder PBL binary format parser (PB5-PB12+).
 
-PBL structure: HDR*(512/1024b) -> FRE*(512b) -> NOD*(3072b, B-Tree) -> ENT* -> DAT*(512b chain)
+Backward-compatible facade that delegates to ChunkEngine for the actual
+NOD*/ENT* parsing.  This module preserves every public API that existed in
+v1.3 so that existing code (CLI commands, tests, external callers) keeps
+working unchanged.
 
-Format spec based on Arnd Schmidt's documentation + gmai2006/powerbuilder-pbl-dump reference:
-- HDR*: Library header (512b ANSI, 1024b Unicode PB10+)
-- FRE*: Free space bitmap (512b)
-- NOD*: B-Tree index nodes (6x512b = 3072b per node group)
-  - Header: 24 bytes (NOD* + left + parent + right + space_left + first_pos + count + last_pos)
-  - ENT* entries start at byte 33 within the NOD* block
-- ENT*: Variable-length entry chunks within NOD* blocks
-  - ANSI:  ENT*(4) + version(4) + data_offset(4) + size(4) + timestamp(4) + comment_len(2) + name_len(2) + name(variable)
-  - Unicode: ENT*(4) + version(8) + data_offset(4) + size(4) + timestamp(4) + comment_len(2) + name_len(2) + name(variable, UTF-16LE)
-- DAT*: Data blocks (512b chain)
-  - Header: DAT*(4) + next_offset(4) + data_len(2) + data(up to 502b)
+Improvements in this version (via ChunkEngine):
+- Complete ENT* comment field parsing (v1.3 always returned "")
+- Arbitrary ENT* version strings (not limited to "0500"/"0600")
+- PB version detection
+- Memory mode for embedded PBD streams (PEExtractor Phase 2)
 """
 from __future__ import annotations
-import logging, os, struct, time, re
+
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import IntEnum
 from pathlib import Path
-from typing import BinaryIO, Optional
+from typing import Optional
+
+from .chunk_engine import (
+    BLOCK_SIZE as BLOCK,
+    BLOCK_SIZE_UNICODE as BLOCK_UNICODE,
+    COMPILED_EXT_SET,
+    KW_TYPE,
+    NODE_BLOCK_SIZE,
+    OBJ_EXT,
+    PBEntry,
+    PBObjectType,
+    SOURCE_EXT_MAP,
+    ChunkEngine,
+)
 
 logger = logging.getLogger(__name__)
 
-class PBObjectType(IntEnum):
-    APPLICATION=0; DATAWINDOW=1; WINDOW=2; MENU=3; FUNCTION=4
-    STRUCTURE=5; USEROBJECT=6; QUERY=7; PIPELINE=8; PROJECT=9; PROXY=10; BINARY=11
-    # PB12+ additions
-    EMBEDDED_SQL=12; WEB_SERVICE=13; COMPONENT=14
+# ---------------------------------------------------------------------------
+# Backward-compatible aliases (used by tests and external code)
+# ---------------------------------------------------------------------------
+HEADER_SIZE_PB_OLD = BLOCK          # 512, ANSI PB5-PB9
+HEADER_SIZE_PB_NEW = BLOCK_UNICODE  # 1024, Unicode PB10+
 
-OBJ_EXT = {
-    PBObjectType.APPLICATION:".sra", PBObjectType.DATAWINDOW:".srd",
-    PBObjectType.WINDOW:".srw", PBObjectType.MENU:".srm",
-    PBObjectType.FUNCTION:".srf", PBObjectType.STRUCTURE:".srs",
-    PBObjectType.USEROBJECT:".sru", PBObjectType.QUERY:".srq",
-    PBObjectType.PIPELINE:".srp", PBObjectType.PROJECT:".srj",
-    PBObjectType.PROXY:".srx", PBObjectType.EMBEDDED_SQL:".sre",
-    PBObjectType.WEB_SERVICE:".srw", PBObjectType.COMPONENT:".src",
-}
-# Comment-based type keywords (from PBL entry comments)
-KW_TYPE = {
-    "application":0, "datawindow":1, "window":2, "menu":3, "function":4,
-    "structure":5, "user object":6, "userobject":6, "query":7, "pipeline":8,
-    "project":9, "proxy":10, "embedded sql":12,
-}
+# Re-export OBJ_EXT / KW_TYPE so old imports still work
+# (they are already imported from chunk_engine above)
 
+
+# ---------------------------------------------------------------------------
+# PBLEntry — thin wrapper around PBEntry for backward compatibility
+# ---------------------------------------------------------------------------
 @dataclass
 class PBLEntry:
-    name: str; object_type: PBObjectType; comment: str = ""
-    first_data_offset: int = 0; data_size: int = 0
-    creation_time: datetime = field(default_factory=lambda: datetime(2000,1,1,tzinfo=timezone.utc))
-    compile_time: datetime = field(default_factory=lambda: datetime(2000,1,1,tzinfo=timezone.utc))
+    """PBL entry metadata.  Delegates most logic to the shared PBEntry."""
+
+    name: str
+    object_type: PBObjectType
+    comment: str = ""
+    first_data_offset: int = 0
+    data_size: int = 0
+    creation_time: datetime = field(
+        default_factory=lambda: datetime(2000, 1, 1, tzinfo=timezone.utc)
+    )
+    compile_time: datetime = field(
+        default_factory=lambda: datetime(2000, 1, 1, tzinfo=timezone.utc)
+    )
+
+    # -- properties identical to PBEntry -----------------------------------
+
     @property
     def extension(self) -> str:
         """Get file extension.
 
         For PB12+ Unicode PBLs, the name already includes the extension.
-        Compiled formats (.win, .dwo, .prp) return '.bin' so source_only filtering works.
+        Compiled formats (.win, .dwo, .prp) return '.bin' so source_only
+        filtering works.
         """
         dot = self.name.rfind(".")
         if dot > 0:
             ext = self.name[dot:].lower()
-            # Source extensions → return as-is
-            if ext in (".srw",".srd",".srm",".srf",".srs",".sru",".srq",
-                       ".srp",".srj",".srx",".sre",".sra",".src"):
+            if ext in (
+                ".srw", ".srd", ".srm", ".srf", ".srs", ".sru", ".srq",
+                ".srp", ".srj", ".srx", ".sre", ".sra", ".src",
+            ):
                 return ext
-            # Compiled formats → return .bin for source_only filtering
-            if ext in (".win",".dwo",".prp"):
+            if ext in (".win", ".dwo", ".prp", ".udo", ".fun", ".str",
+                       ".apl", ".men", ".pra"):
                 return ".bin"
         return OBJ_EXT.get(self.object_type, ".bin")
+
     @property
-    def type_name(self):
-        for n,c in KW_TYPE.items():
-            if c == self.object_type: return n.title()
+    def type_name(self) -> str:
+        for n, c in KW_TYPE.items():
+            if c == self.object_type:
+                return n.title()
         return "Unknown"
+
     @property
     def base_name(self) -> str:
         """Object name without extension."""
         dot = self.name.rfind(".")
         return self.name[:dot] if dot > 0 else self.name
 
+    # -- conversion helpers ------------------------------------------------
+
+    @classmethod
+    def from_pb_entry(cls, e: PBEntry) -> PBLEntry:
+        """Create a PBLEntry from a ChunkEngine PBEntry."""
+        ct = e.creation_time or datetime(2000, 1, 1, tzinfo=timezone.utc)
+        return cls(
+            name=e.name,
+            object_type=e.object_type,
+            comment=e.comment,
+            first_data_offset=e.first_data_offset,
+            data_size=e.data_size,
+            creation_time=ct,
+        )
+
+
+# ---------------------------------------------------------------------------
+# PBLSource — unchanged
+# ---------------------------------------------------------------------------
 @dataclass
 class PBLSource:
-    entry: PBLEntry; source: bytes; filename: str = ""
+    entry: PBLEntry
+    source: bytes
+    filename: str = ""
+
     @property
     def source_text(self) -> str:
         """Decode source bytes to text, auto-detecting encoding.
@@ -105,10 +146,8 @@ class PBLSource:
         # Detect UTF-16LE: check for alternating null bytes (BOM-less)
         # PB12+ stores all DAT* source data as UTF-16LE without BOM
         if src[1] == 0 and src[3] == 0 and 0x20 <= src[0] <= 0x7e:
-            # Verify by decoding a larger sample and checking for PB markers
             try:
                 sample = src[:512].decode("utf-16-le", errors="strict")
-                # Check if it looks like PB source (not compiled binary)
                 sl = sample.lower()
                 if any(kw in sl for kw in (
                     "$pbexportheader$", "export by", "global type",
@@ -120,7 +159,6 @@ class PBLSource:
             except (UnicodeDecodeError, ValueError):
                 pass
 
-        # Standard fallback chain for ANSI / UTF-8 PBLs
         for enc in ("utf-8-sig", "utf-8", "latin-1"):
             try:
                 return src.decode(enc)
@@ -129,304 +167,97 @@ class PBLSource:
         return src.decode("latin-1", errors="replace")
 
     def to_utf8_bytes(self) -> bytes:
-        """Convert source to UTF-8 bytes, handling UTF-16LE PBL data.
-
-        For PB12+ Unicode PBLs, the raw source is UTF-16LE encoded.
-        This method detects that and re-encodes to UTF-8 for file storage.
-        Compiled binary entries (no PB markers detected) are stored as-is.
-        """
+        """Convert source to UTF-8 bytes, handling UTF-16LE PBL data."""
         text = self.source_text
         result = text.encode("utf-8")
-        # Safety: if result still contains embedded nulls, the source was
-        # likely a compiled binary — return original bytes instead
         if b"\x00" in result:
             return self.source
         return result
 
-BLOCK = 512
-BLOCK_UNICODE = 1024
-NODE_BLOCK_SIZE = 3072
 
-# Backward-compatible aliases for tests
-HEADER_SIZE_PB_OLD = BLOCK      # 512, ANSI PB5-PB9
-HEADER_SIZE_PB_NEW = BLOCK_UNICODE  # 1024, Unicode PB10+
-
-
+# ---------------------------------------------------------------------------
+# PBLParser — backward-compatible facade over ChunkEngine
+# ---------------------------------------------------------------------------
 class PBLParser:
     """Parse PowerBuilder PBL library files.
 
-    Supports PB5 through PB12+ based on Arnd Schmidt's format spec.
-    Key format details:
-    - HDR*: 512b (ANSI) or 1024b (Unicode, PB10+)
-    - FRE*: 512b bitmap block at offset 512 or 1024
-    - NOD*: 3072b B-tree index nodes, starting at offset 1024 or 2048
-    - ENT*: Variable-length entries within NOD* blocks
-    - DAT*: 512b data chain blocks
+    Delegates all chunk-level parsing to ChunkEngine.  The public API
+    (entries, open/close, export_*, list_entries, get_entry, …) is 100 %
+    backward-compatible with v1.3.
 
-    The parser correctly handles:
-    - B-tree traversal via left/parent/right offsets
-    - ANSI vs Unicode ENT* entry formats
-    - DAT* block chain reading with proper next-offset links
+    New behaviour (via ChunkEngine):
+    - ``comment`` field is now populated from ENT* comment data
+    - ENT* version strings are no longer limited to "0500"/"0600"
+    - ``pb_version`` property exposes detected PB version number
     """
-    def __init__(self, fp: str|Path, strict: bool = False):
+
+    def __init__(self, fp: str | Path, strict: bool = False):
         self.fp = Path(fp)
-        self._fh: Optional[BinaryIO] = None
-        self.entries: list[PBLEntry] = []
         self.strict = strict
+        self._engine: Optional[ChunkEngine] = None
+        self.entries: list[PBLEntry] = []
         self._is_unicode = False
         self._header_size = 0
 
+    # -- lifecycle ---------------------------------------------------------
+
     def open(self):
-        self._fh = open(self.fp, "rb")
-        self._detect_format()
-        self._parse()
+        self._engine = ChunkEngine(path=self.fp)
+        self._engine.open()
+        self._is_unicode = self._engine.is_unicode
+        self._header_size = self._engine.header_size
+        # Convert PBEntry list to PBLEntry list
+        self.entries = [PBLEntry.from_pb_entry(e) for e in self._engine.entries]
         logger.debug("Parsed %d entries from %s (unicode=%s)",
                      len(self.entries), self.fp, self._is_unicode)
         return self
+
     def close(self):
-        if self._fh:
-            self._fh.close()
-            self._fh = None
-    def __enter__(self): return self.open()
-    def __exit__(self, *a): self.close()
+        if self._engine:
+            self._engine.close()
+            self._engine = None
+
+    def __enter__(self):
+        return self.open()
+
+    def __exit__(self, *a):
+        self.close()
+
+    # -- new properties ----------------------------------------------------
+
+    @property
+    def pb_version(self) -> int:
+        """Detected PB version number (e.g. 500, 600).  0 if unknown."""
+        return self._engine.pb_version if self._engine else 0
+
+    # -- low-level (kept for any code that references _read / _fh) ----------
+
     def _read(self, off, sz):
-        self._fh.seek(off)
-        return self._fh.read(sz)
+        if self._engine and self._engine._stream:
+            self._engine._stream.seek(off)
+            return self._engine._stream.read(sz)
+        raise RuntimeError("Engine not open")
 
-    def _detect_format(self):
-        """Detect header size and whether PBL uses Unicode format.
-
-        Detection logic:
-        1. Read first 4 bytes, verify 'HDR*'
-        2. Check offset 512: if 'FRE*' → ANSI (512b header)
-        3. Otherwise check offset 1024 for 'FRE*' → Unicode (1024b header)
-        """
-        file_size = self._fh.seek(0, 2)
-        header_data = self._read(0, min(BLOCK_UNICODE + 4, file_size))
-        if not header_data or header_data[:4] != b"HDR*":
-            raise ValueError(f"Invalid PBL file: no HDR* signature at offset 0")
-
-        # Check if FRE* is at offset 512 (ANSI) or 1024 (Unicode)
-        if len(header_data) >= 512 + 4 and header_data[512:516] == b"FRE*":
-            self._is_unicode = False
-            self._header_size = BLOCK
-        elif len(header_data) >= BLOCK_UNICODE + 4 and header_data[BLOCK_UNICODE:BLOCK_UNICODE+4] == b"FRE*":
-            self._is_unicode = True
-            self._header_size = BLOCK_UNICODE
-        else:
-            # Fallback: check for BOM or unicode markers in first 32 bytes
-            if b"\xff\xfe" in header_data[:32] or b"\xfe\xff" in header_data[:32]:
-                self._is_unicode = True
-                self._header_size = BLOCK_UNICODE
-            else:
-                self._is_unicode = False
-                self._header_size = BLOCK
-
-        logger.debug("Header size: %d, unicode: %s", self._header_size, self._is_unicode)
-
-    def _parse(self):
-        """Parse all entries by traversing NOD* B-tree.
-
-        Algorithm ported from PbdViewer (PbFile.cs) which has been verified
-        against real PB9-PB12.6 PBL files. Key differences from the old approach:
-        - Sequential reads by entry_count, no signature scanning
-        - NOD* header is 32 bytes (not 24), entries start at byte 32
-        - name_len field includes ENT* marker + version bytes, must subtract
-        """
-        file_size = self._fh.seek(0, 2)
-
-        # NOD* starts after HDR* + FRE*
-        nod_start = self._header_size + BLOCK
-        if nod_start + 4 > file_size:
-            logger.warning("File too small for NOD* block")
-            return
-
-        # Traverse B-tree: start at first NOD*, follow right pointers
-        visited = set()
-        current_offset = nod_start
-
-        # Pre-calculate ENT* header sizes (matching PbdViewer's num2/num3)
-        # ANSI: num=1, num2=4+1*4=8, num3=8+16=24
-        # Unicode: num=2, num2=4+2*4=12, num3=12+16=28
-        num = 2 if self._is_unicode else 1
-        num2 = 4 + num * 4          # offset of data fields within ENT*
-        num3 = num2 + 16            # fixed ENT* header size
-
-        while current_offset > 0 and current_offset not in visited:
-            visited.add(current_offset)
-            if current_offset + NODE_BLOCK_SIZE > file_size:
-                logger.warning("NOD* at offset %d exceeds file size %d", current_offset, file_size)
-                break
-
-            nod_data = self._read(current_offset, NODE_BLOCK_SIZE)
-            if not nod_data or nod_data[:4] != b"NOD*":
-                logger.warning("No NOD* signature at offset %d, got %r", current_offset, nod_data[:4] if nod_data else b"")
-                break
-
-            # Parse NOD* header
-            # PbdViewer reads 32 bytes: NOD*(4) + left(4) + parent(4) + right(4) + ?(16)
-            # entry_count is at byte offset 20 within the NOD* block
-            entry_count = struct.unpack_from("<H", nod_data, 20)[0]
-            right_offset = struct.unpack_from("<I", nod_data, 12)[0]
-
-            logger.debug("NOD* at %d: %d entries, right=%d",
-                         current_offset, entry_count, right_offset)
-
-            # Sequential read: entries start at byte 32 (after 32-byte NOD* header)
-            # This matches PbdViewer's approach exactly
-            pos_in_nod = 32
-
-            for _ in range(entry_count):
-                if pos_in_nod + num3 > len(nod_data):
-                    logger.debug("  Ran out of NOD* data at pos %d", pos_in_nod)
-                    break
-
-                # Read ENT* fixed header (num3 bytes)
-                ent_header = nod_data[pos_in_nod:pos_in_nod + num3]
-
-                # Verify ENT* signature
-                if ent_header[:4] != b"ENT*":
-                    logger.debug("  No ENT* at pos %d, got %r", pos_in_nod, ent_header[:4])
-                    break
-
-                # Verify version string
-                version_str = ent_header[4:4 + num * 4]
-                if self._is_unicode:
-                    ver_text = version_str.decode("utf-16-le", errors="replace")
-                else:
-                    ver_text = version_str.decode("ascii", errors="replace")
-                if ver_text not in ("0500", "0600"):
-                    logger.debug("  Unexpected version %r at pos %d", ver_text, pos_in_nod)
-                    break
-
-                # Parse fixed fields
-                data_offset = struct.unpack_from("<I", ent_header, num2)[0]
-                obj_size = struct.unpack_from("<I", ent_header, num2 + 4)[0]
-                raw_ts = struct.unpack_from("<I", ent_header, num2 + 8)[0]
-                # PbdViewer: only ONE ushort at num2+14 = name buffer length
-                # (includes ENT* marker + version bytes as prefix)
-                name_buf_len = struct.unpack_from("<H", ent_header, num2 + 14)[0]
-
-                # Read name buffer
-                name_buf_start = pos_in_nod + num3
-                name_buf_end = name_buf_start + name_buf_len
-                if name_buf_end > len(nod_data):
-                    logger.debug("  Name buffer overflow at pos %d, buf_len=%d", pos_in_nod, name_buf_len)
-                    break
-
-                name_buf = nod_data[name_buf_start:name_buf_end]
-
-                # Decode name: name_buf_len includes version bytes, so strip them
-                # PbdViewer: Project.GetString(buffer2, 0, uShort2 - num)
-                actual_name_len = name_buf_len - num
-                if actual_name_len <= 0:
-                    pos_in_nod = name_buf_end
-                    continue
-
-                if self._is_unicode:
-                    name = name_buf[:actual_name_len].decode("utf-16-le", errors="replace")
-                else:
-                    name = name_buf[:actual_name_len].decode("latin-1", errors="replace")
-                name = name.rstrip("\x00").strip()
-
-                # PbdViewer: after reading name buffer, position moves to next ENT*
-                pos_in_nod = name_buf_end
-
-                # Timestamp
-                ts = raw_ts
-                if ts > 3_000_000_000:
-                    ts = ts // 1000
-                try:
-                    t = datetime.fromtimestamp(ts, tz=timezone.utc) if ts > 0 else datetime(2000, 1, 1, tzinfo=timezone.utc)
-                except (OSError, OverflowError, ValueError):
-                    t = datetime(2000, 1, 1, tzinfo=timezone.utc)
-
-                # Detect type
-                if self._is_unicode:
-                    ot = self._detect_type_from_name_ext(name, "")
-                else:
-                    ot = self._detect_type(name, "")
-
-                entry = PBLEntry(name=name, object_type=ot, comment="",
-                                 first_data_offset=data_offset, data_size=obj_size,
-                                 creation_time=t)
-
-                # Validate and deduplicate
-                if entry.first_data_offset > 0 and entry.data_size > 0:
-                    if entry.first_data_offset <= file_size and entry.data_size <= 10_000_000:
-                        if not any(x.name == entry.name for x in self.entries):
-                            self.entries.append(entry)
-                            logger.debug("  Entry: %s type=%d offset=%d size=%d",
-                                         entry.name, entry.object_type,
-                                         entry.first_data_offset, entry.data_size)
-
-            current_offset = right_offset
-
-        logger.info("Total entries parsed: %d", len(self.entries))
+    # -- type detection (kept for backward compat; ChunkEngine does this) --
 
     def _detect_type_from_name_ext(self, name: str, comment: str) -> PBObjectType:
-        """Detect object type from the extension embedded in the entry name.
-
-        In PB12+ Unicode PBLs, the ENT* name already includes the extension:
-        - .srw = Window source
-        - .win = Window compiled
-        - .srd = DataWindow source
-        - .dwo = DataWindow compiled
-        - .srm = Menu source
-        - .prp = Menu compiled (properties)
-        - .srf = Function source
-        - .srs = Structure source
-        - .sru = UserObject source
-        - .srq = Query source
-        - .srp = Pipeline source
-        - .srj = Project source
-        - .srx = Proxy source
-        - .sre = Embedded SQL source
-        """
+        """Detect object type from extension in name (PB12+ Unicode PBLs)."""
         nl = name.lower()
-        # Source extensions (these are the ones we want to export)
-        SOURCE_EXT = {
-            ".srw": PBObjectType.WINDOW,
-            ".srd": PBObjectType.DATAWINDOW,
-            ".srm": PBObjectType.MENU,
-            ".srf": PBObjectType.FUNCTION,
-            ".srs": PBObjectType.STRUCTURE,
-            ".sru": PBObjectType.USEROBJECT,
-            ".srq": PBObjectType.QUERY,
-            ".srp": PBObjectType.PIPELINE,
-            ".srj": PBObjectType.PROJECT,
-            ".srx": PBObjectType.PROXY,
-            ".sre": PBObjectType.EMBEDDED_SQL,
-            ".sra": PBObjectType.APPLICATION,
-        }
-        for ext, otype in SOURCE_EXT.items():
+        for ext, otype in SOURCE_EXT_MAP.items():
             if nl.endswith(ext):
-                return otype
-
-        # Compiled extensions → still assign correct type but mark as binary
-        COMPILED_EXT = {
-            ".win": PBObjectType.WINDOW,
-            ".dwo": PBObjectType.DATAWINDOW,
-            ".prp": PBObjectType.MENU,
-            ".udo": PBObjectType.USEROBJECT,
-            ".fun": PBObjectType.FUNCTION,
-            ".str": PBObjectType.STRUCTURE,
-            ".apl": PBObjectType.APPLICATION,
-        }
-        for ext, otype in COMPILED_EXT.items():
+                return PBObjectType(otype)
+        for ext in COMPILED_EXT_SET:
             if nl.endswith(ext):
-                return PBObjectType.BINARY  # compiled binary, not source
-
-        # Fallback: try comment-based detection
+                return PBObjectType.BINARY
         return self._detect_type(name, comment)
 
     def _detect_type(self, name: str, comment: str) -> PBObjectType:
         """Detect object type from comment keyword or naming convention."""
-        cl = comment.lower()
-        for kw, tc in KW_TYPE.items():
-            if kw in cl:
-                return PBObjectType(tc)
-        # Heuristic: name prefix convention
+        if comment:
+            cl = comment.lower()
+            for kw, tc in KW_TYPE.items():
+                if kw in cl:
+                    return PBObjectType(tc)
         nl = name.lower()
         if nl.startswith("d_"):
             return PBObjectType.DATAWINDOW
@@ -440,92 +271,82 @@ class PBLParser:
             return PBObjectType.FUNCTION
         if nl.startswith("s_"):
             return PBObjectType.STRUCTURE
-        if nl.startswith("p_") and "project" in cl:
+        if nl.startswith("p_") and comment and "project" in comment.lower():
             return PBObjectType.PROJECT
-        # Default: if name matches common app name patterns
         if nl in ("dgsauna", "dgapp", "app_dgsauna"):
             return PBObjectType.APPLICATION
         return PBObjectType.BINARY
 
+    # -- export methods (delegate to ChunkEngine.read_data_chain) ----------
+
     def export_source(self, entry: PBLEntry, max_size: int = 10_000_000) -> Optional[bytes]:
-        """Extract source data for an entry by following the DAT* block chain.
-
-        DAT* block format (per spec):
-        Bytes 0-3:   "DAT*" (Char 4)
-        Bytes 4-7:   Next data block offset (Long, 0 = end of chain)
-        Bytes 8-9:   Data length in this block (Integer, max 502)
-        Bytes 10-511: Data (Blob)
-        """
-        if not self._fh or entry.first_data_offset == 0:
+        """Extract source data for an entry by following the DAT* block chain."""
+        if not self._engine:
             return None
-        file_size = self._fh.seek(0, 2)
-        if entry.first_data_offset > file_size:
-            return None
-
-        src = bytearray()
-        cur = entry.first_data_offset
-        rem = min(entry.data_size, max_size) if entry.data_size > 0 else max_size
-
-        while cur != 0 and rem > 0:
-            if cur > file_size:
-                logger.warning("Data offset %d exceeds file size %d for %s",
-                               cur, file_size, entry.name)
-                break
-            blk = self._read(cur, BLOCK)
-            if not blk or len(blk) < 10:
-                break
-
-            # Check DAT* signature
-            if blk[:4] != b"DAT*":
-                # Some PBL formats may not have DAT* marker, try raw read
-                src.extend(blk[:min(rem, len(blk))])
-                break
-
-            # Parse DAT* header: marker(4) + next_offset(4) + data_len(2)
-            next_offset = struct.unpack_from("<I", blk, 4)[0]
-            data_len = struct.unpack_from("<H", blk, 8)[0]
-
-            # Safety: data_len should not exceed block capacity (502 bytes max)
-            if data_len > 502 or data_len <= 0:
-                data_len = BLOCK - 10  # fallback to max
-
-            actual_len = min(data_len, rem)
-            src.extend(blk[10:10 + actual_len])
-            rem -= actual_len
-
-            # Follow chain: 0 or very large value = end
-            if next_offset == 0 or next_offset > file_size or next_offset == 0xFFFFFFFF:
-                cur = 0
-            else:
-                cur = next_offset
-
-        return bytes(src) if src else None
+        return self._engine.read_data_chain(
+            entry.first_data_offset,
+            min(entry.data_size, max_size) if entry.data_size > 0 else max_size,
+        )
 
     def export_all(self):
-        res=[]
+        res = []
         for e in self.entries:
             s = self.export_source(e)
             if s:
-                # Use entry.name directly (already includes extension in PB12+)
-                # or append OBJ_EXT extension for ANSI PBLs where name has no ext
-                fname = e.name if '.' in e.name else e.name + e.extension
+                fname = e.name if "." in e.name else e.name + e.extension
                 res.append(PBLSource(entry=e, source=s, filename=fname))
         return res
 
-    def export_to_directory(self, out, source_only=True):
-        op=Path(out); op.mkdir(parents=True,exist_ok=True); exp=[]
+    def export_to_directory(self, out, source_only=True, by_type=False):
+        """Export source files to directory.
+
+        Args:
+            out: Output directory path.
+            source_only: If True, skip compiled binary entries.
+            by_type: If True, organize into subdirectories by object type.
+        """
+        op = Path(out)
+        op.mkdir(parents=True, exist_ok=True)
+        exp = []
         for ps in self.export_all():
-            if source_only and ps.entry.extension==".bin": continue
-            fp=op/ps.filename
-            # Convert encoding (UTF-16LE → UTF-8 for PB12+ PBLs)
+            if source_only and ps.entry.extension == ".bin":
+                continue
+            if by_type:
+                subdir = self._type_subdir(ps.entry.object_type)
+                fp = op / subdir / ps.filename
+            else:
+                fp = op / ps.filename
+            fp.parent.mkdir(parents=True, exist_ok=True)
             data = ps.to_utf8_bytes()
-            # Strip any residual null bytes
             data = data.replace(b"\x00", b"")
             if not data or len(data) < 10:
                 continue
             fp.write_bytes(data)
             exp.append(str(fp))
         return exp
+
+    @staticmethod
+    def _type_subdir(obj_type: PBObjectType) -> str:
+        """Map PBObjectType to subdirectory name for by_type export."""
+        return {
+            PBObjectType.APPLICATION: "application",
+            PBObjectType.DATAWINDOW: "datawindow",
+            PBObjectType.WINDOW: "window",
+            PBObjectType.MENU: "menu",
+            PBObjectType.FUNCTION: "function",
+            PBObjectType.STRUCTURE: "structure",
+            PBObjectType.USEROBJECT: "userobject",
+            PBObjectType.QUERY: "query",
+            PBObjectType.PIPELINE: "pipeline",
+            PBObjectType.PROJECT: "project",
+            PBObjectType.PROXY: "proxy",
+            PBObjectType.EMBEDDED_SQL: "embedded_sql",
+            PBObjectType.WEB_SERVICE: "webservice",
+            PBObjectType.COMPONENT: "component",
+            PBObjectType.BINARY: "binary",
+        }.get(obj_type, "other")
+
+    # -- query methods -----------------------------------------------------
 
     def list_entries(self) -> list[dict]:
         return [
@@ -561,19 +382,29 @@ class PBLParser:
         src = self.export_source(entry)
         if not src:
             return None
-        fname = entry.name if '.' in entry.name else entry.name + entry.extension
+        fname = entry.name if "." in entry.name else entry.name + entry.extension
         return PBLSource(entry=entry, source=src, filename=fname)
 
 
+# ---------------------------------------------------------------------------
+# PBLBatchExporter — unchanged
+# ---------------------------------------------------------------------------
 class PBLBatchExporter:
-    def __init__(self, proj, out): self.proj=Path(proj); self.out=Path(out)
+    def __init__(self, proj, out):
+        self.proj = Path(proj)
+        self.out = Path(out)
+
     def find_pbls(self, recursive=True):
         return sorted(self.proj.glob("**/*.pbl") if recursive else "*.pbl")
-    def export_all(self, recursive=True):
-        res={}; pbls=self.find_pbls(recursive)
+
+    def export_all(self, recursive=True, by_type=False):
+        res = {}
+        pbls = self.find_pbls(recursive)
         for p in pbls:
             sub = self.out / p.stem
             try:
-                with PBLParser(p) as pr: res[str(p)]=pr.export_to_directory(sub)
-            except Exception as e: res[str(p)]=[f"ERROR: {e}"]
+                with PBLParser(p) as pr:
+                    res[str(p)] = pr.export_to_directory(sub, by_type=by_type)
+            except Exception as e:
+                res[str(p)] = [f"ERROR: {e}"]
         return res

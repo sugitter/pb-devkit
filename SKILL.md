@@ -1,8 +1,8 @@
 # PB DevKit - PowerBuilder Legacy System Toolkit
 
 > **面向 AI Agent 的 PowerBuilder 旧系统维护工具包**
-> 无需安装 PowerBuilder IDE，在命令行即可完成 EXE/PBD **反编译**、PBL 源码导出、分析、重构、导入、编译全流程。
-> 适用于 PB4 ~ PB2025 全系列版本。
+> 无需安装 PowerBuilder IDE，在命令行即可完成 EXE/PBD **代码梳理**、PBL 源码导出、分析、重构、导入、编译全流程。
+> 适用于 **PB5 ~ PB12.6** 全系列版本。
 
 ## 何时触发
 
@@ -10,7 +10,7 @@
 
 - PowerBuilder / PB / PBL / PBD 相关的开发、维护、迁移、分析
 - 查看或导出 PB 源码（.sr* 文件）
-- **从 EXE/PBD 反编译恢复 PowerScript 源码**（无原始 PBL 时）
+- **从 EXE/PBD 梳理导出 PowerScript 源码**（无原始 PBL 时）
 - 分析 PB 代码质量、依赖关系、复杂度
 - 重构或优化 PB 旧系统代码
 - PB 项目结构梳理、文档生成
@@ -48,8 +48,8 @@ PowerBuilder 在 1990s~2010s 是企业级数据库管理系统的主流开发工
 │   ├── sr_parser.py           # .sr* 源码解析 + 质量分析 + 依赖分析 + 复杂度分析
 │   ├── pborca_engine.py       # PBORCA DLL 封装（导入/编译/构建 EXE）
 │   ├── pe_extractor.py        # PE EXE/DLL → 提取内嵌 PBD 数据
-│   ├── decompiler.py          # PBD/PBL/EXE 反编译 → PowerScript
-│   ├── resoures/              # 反编译器资源文件（PB 类型定义 .bin）
+│   ├── decompiler.py          # PBD/PBL/EXE 代码梳理 → PowerScript
+│   ├── resoures/              # 类型定义资源文件（PB 类型定义 .bin）
 │   ├── refactoring.py         # 自动重构引擎（5 条规则）
 │   └── config.py              # 项目级配置（.pbdevkit.json）
 ├── orca/                      # PBSpyORCA.dll（需手动下载）
@@ -77,7 +77,7 @@ python pb.py <command> [options]
 | `pb list <pbl_or_dir>` | 列出 PBL 中的对象 | 可选 |
 | `pb export <pbl_or_dir> [out]` | 导出 PBL 源码为 .sr* 文件 | 可选 |
 | `pb export ... --by-type` | 按对象类型分子目录导出（推荐） | 可选 |
-| `pb export <exe> -o <dir> --pbl-tree` | EXE/PBD 反编译 + 按 PBL 组织导出 | 否 |
+| `pb export <exe> -o <dir> --pbl-tree` | EXE/PBD 代码梳理 + 按 PBL 组织导出 | 否 |
 | `pb analyze <dir>` | 代码质量分析（单文件/目录） | 否 |
 | `pb analyze-project <dir>` | 完整项目分析（自动检测 PBL tree） | 否 |
 | `pb analyze-project <dir> --html f` | 生成 HTML 分析报告 | 否 |
@@ -88,7 +88,7 @@ python pb.py <command> [options]
 | `pb diff <dir1> <dir2>` | 比较两份源码差异 | 否 |
 | `pb workflow <pbl> [dir]` | 全流程：导出→分析→重构 | 否 |
 | `pb snapshot <dir>` | 快照对比（保存/比较源码快照） | 否 |
-| `pb decompile <exe/pbd/pbl>` | **反编译**编译产物回 PowerScript | 否 |
+| `pb decompile <exe/pbd/pbl>` | **代码梳理**编译产物 → PowerScript | 否 |
 | `pb autoexport <dir>` | **★ 智能检测项目类型+全量导出**到 src/ | 否 |
 | `pb import <pbl> <dir>` | 导入 .sr* 文件到 PBL | 是 |
 | `pb build <pbl> <app>` | 全量重建应用 | 是 |
@@ -339,10 +339,10 @@ end function
 1. **永远先 dry-run**：refactor 命令默认不修改文件，确认安全后再 --apply
 2. **备份意识**：refactor --apply 会自动创建 .bak 备份
 3. **ORCA DLL**：导出（export）不需要 DLL，但导入（import）/编译（build）需要
-4. **编码问题**：.sr* 文件使用 UTF-8-sig 编码读取；反编译输出 UTF-8 编码
+4. **编码问题**：.sr* 文件使用 UTF-8-sig 编码读取；代码梳理输出 UTF-8 编码
 5. **项目特定配置**：不同 PB 项目的 PB 版本、数据库类型可能不同，用 --pb-version 调整
 6. **批量操作**：大部分命令支持目录作为参数，会自动递归处理
-7. **反编译限制**：P-code 反编译支持 PB9/PB10/PB10.5/PB11 版本；DataWindow (.dwo) 为编译格式，反编译为原始二进制结构，可读性有限
+7. **导出限制**：P-code 梳理支持 PB9/PB10/PB10.5/PB11 版本；DataWindow (.dwo) 为编译格式，导出为原始二进制结构，可读性有限
 
 ## 典型 PB 旧系统特征（帮助 Agent 理解上下文）
 
@@ -361,20 +361,20 @@ end function
 4. **尊重现有逻辑**：旧系统的代码可能看起来奇怪，但往往有其历史原因
 5. **提供上下文**：向用户解释每项发现的意义和风险等级
 
-### 场景 7：从 EXE/PBD 反编译恢复源码（无原始 PBL 时）
+### 场景 7：从 EXE/PBD 梳理导出源码（无原始 PBL 时）
 
-用户说："只有 EXE 没有源码，能恢复吗" / "帮我反编译这个 PB 程序"
+用户说："只有 EXE 没有源码，能恢复吗" / "帮我梳理这个 PB 项目"
 
 > **适用情形**：原始 PBL 丢失、仅有编译产物、需要了解已部署程序的实现逻辑。
 
 ```bash
-# Step 1: 列出可反编译的对象
+# Step 1: 列出可导出的对象
 python pb.py decompile app.exe --list
 
-# Step 2: 全量反编译，输出 .ps 文件到目录
+# Step 2: 全量导出，输出 .ps 文件到目录
 python pb.py decompile app.exe --output ./decompiled
 
-# Step 3: 反编译单个对象（不含扩展名即可）
+# Step 3: 导出单个对象（不含扩展名即可）
 python pb.py decompile app.exe --entry w_login
 
 # Step 4: 查看 PBD 内部结构树
@@ -395,13 +395,13 @@ from pb_devkit.decompiler import decompile_file, list_entries
 # 列出所有对象
 entries = list_entries("app.exe")  # ['w_login.win', 'w_main.win', ...]
 
-# 反编译全部
+# 全量导出
 results = decompile_file("app.exe", decompile_all=True)
 for r in results:
     if r.success and r.source:
         print(r.entry_name, "->", len(r.source), "chars")
 
-# 反编译单个对象
+# 导出单个对象
 [r] = decompile_file("app.exe", entry_name="w_login")
 print(r.source)
 ```
@@ -471,14 +471,14 @@ python pb.py report ./exported -o ./docs/CODE_REVIEW.md
 
 也可以通过 `--config` 指定：`python pb.py --config ./my-config.json analyze ./exported`
 
-### 场景 8：EXE 全内嵌反编译 + PBL 组织导出 + 项目分析
+### 场景 8：EXE 全内嵌梳理 + PBL 组织导出 + 项目分析
 
 用户说：\"只有一个 EXE 文件，帮我导出源码并分析\" / \"这个 EXE 里面没有 PBL 文件\"
 
 > **适用情形**：EXE 编译时选择了全内嵌模式，所有 PBL 合并到 EXE 中，原始 PBL 文件已丢失。
 
 ```bash
-# Step 1: 反编译 + 自动推断 PBL 分组导出
+# Step 1: 代码梳理 + 自动推断 PBL 分组导出
 python pb.py export app.exe -o ./src --pbl-tree
 
 # Step 2: 自动检测 PBL tree 结构并分析（含 PBL 分组统计）
@@ -542,6 +542,6 @@ python pb.py autoexport F:\workspace\X6\3.5\dgsauna --detect --json
 | 类型 | 判断依据 | 导出策略 |
 |------|----------|---------|
 | `PBL_PROJECT` | 有 HDR* 有效的 .pbl 文件，无 EXE/PBD | 每个 PBL → `src/<pbl_name>/` 子目录 |
-| `BINARY_PROJECT` | 有 EXE(内嵌PBD) 或 .pbd 文件，无 PBL | 反编译 + PBL 分组推断 → `src/<pbl_name>.pbl/` |
-| `MIXED_PROJECT` | 同时有 PBL 源码 和 EXE/PBD | PBL 导出到 `src/`，EXE/PBD 反编译到 `src/_decompiled/` |
+| `BINARY_PROJECT` | 有 EXE(内嵌PBD) 或 .pbd 文件，无 PBL | 代码梳理 + PBL 分组推断 → `src/<pbl_name>.pbl/` |
+| `MIXED_PROJECT` | 同时有 PBL 源码 和 EXE/PBD | PBL 导出到 `src/`，EXE/PBD 梳理到 `src/_decompiled/` |
 

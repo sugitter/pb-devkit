@@ -15,7 +15,7 @@
 | PBL 源码解析 | ✅ ANSI + Unicode | ✅ 完整 ENT* 注释解析 |
 | PBD 编译库 | ❌ 跳过编译对象 | ✅ 完整 chunk 链 + Entry 元数据 |
 | EXE/DLL 宿主 | ❌ 不支持 | ✅ PE 资源节提取 → PBD 子流 |
-| P-code 反编译 | ❌ 不支持 | ✅ PB9-PB11+ 指令集 |
+| P-code 代码梳理 | ❌ 不支持 | ✅ PB9-PB11+ 指令集 |
 | 编译对象结构 | ❌ 不解析 | ✅ 变量/函数/继承/类型完整解析 |
 | 系统类型定义 | ❌ 不支持 | ✅ typedef .bin 解码 |
 
@@ -24,7 +24,7 @@
 1. **Sybase 原生格式优先** — 所有解析严格遵循 Sybase 设计的 chunk 管理格式（HDR*/NOD*/ENT*/DAT*），零猜测
 2. **零外部依赖** — 纯 Python + 标准库（struct/gzip/re/io），与 v1.3 保持一致
 3. **向后兼容** — 现有 `PBLParser` API 不变，新功能通过扩展类暴露
-4. **渐进式解析** — 支持三种粒度：目录列表 → 元数据 → 源码/二进制 → P-code 反编译
+4. **渐进式解析** — 支持三种粒度：目录列表 → 元数据 → 源码/二进制 → P-code 代码还原
 
 ---
 
@@ -113,10 +113,10 @@ src/pb_devkit/
 ├── type_system.py         # [新增] PB 类型系统 (值/系统/用户三类索引)
 ├── variable_parser.py     # [新增] 变量解析 (标志位/数组/枚举/默认值)
 ├── pcode/
-│   ├── __init__.py        # P-code 反编译引擎入口
+│   ├── __init__.py        # P-code 还原引擎入口
 │   ├── instruction.py     # [新增] 指令定义与操作码表 (PB9-PB11+)
 │   ├── decoder.py         # [新增] 指令流解码器 (字节→CodeLine)
-│   ├── decompiler.py      # [新增] 反编译器 (CodeLine→PowerScript)
+│   ├── decompiler.py      # [新增] 代码还原器 (CodeLine→PowerScript)
 │   ├── sql_restore.py     # [新增] SQL 语句还原
 │   ├── control_flow.py    # [新增] 控制流分析 (try-catch/choose/if-else)
 │   ├── version_map.py     # [新增] PB 版本→指令集映射
@@ -232,7 +232,7 @@ class UniversalParser:
         return parser.parse()
     
     def decompile(self, entry: PBEntry, routine_index: int = 0) -> str|None:
-        """反编译 P-code 为 PowerScript 文本。"""
+        """还原 P-code 为 PowerScript 文本。"""
         binary = self.parse_binary(entry)
         if not binary:
             return None
@@ -744,7 +744,7 @@ class BinaryEntryParser:
 
 ---
 
-## 六、P-Code 反编译引擎
+## 六、P-Code 还原引擎
 
 ### 6.1 PB 版本 → P-code 指令集映射
 
@@ -838,11 +838,11 @@ P-code 操作码分类:
    └── AnyCast
 ```
 
-### 6.3 PCodeEngine — 反编译引擎
+### 6.3 PCodeEngine — 还原引擎
 
 ```python
 class PCodeEngine:
-    """P-Code 反编译引擎。
+    """P-Code 还原引擎。
     
     工作流程:
     bytes → Decoder → CodeLine[] → ControlFlowAnalyzer → Decompiler → PowerScript text
@@ -854,7 +854,7 @@ class PCodeEngine:
         self.decompiler = PowerScriptDecompiler(pcode_version)
     
     def decompile(self, binary: BinaryEntry, routine_index: int = 0) -> str:
-        """反编译指定函数/事件的 P-code 为 PowerScript 文本。"""
+        """还原指定函数/事件的 P-code 为 PowerScript 文本。"""
         func = binary.function_defs[routine_index]
         
         # 1. 提取 P-code 字节流
@@ -867,7 +867,7 @@ class PCodeEngine:
         cf_analyzer = ControlFlowAnalyzer(code_lines)
         cf_analyzer.analyze()
         
-        # 4. 反编译为 PowerScript
+        # 4. 还原为 PowerScript
         script = self.decompiler.decompile(code_lines, cf_analyzer, func)
         
         return script
@@ -984,7 +984,7 @@ class PowerScriptDecompiler:
     
     def decompile(self, code_lines: list[CodeLine], 
                   cfg: ControlFlowGraph, func: FunctionDef) -> str:
-        """将指令序列反编译为 PowerScript。"""
+        """将指令序列还原为 PowerScript。"""
         lines = []
         indent = 1
         
@@ -1197,7 +1197,7 @@ class TypedefLoader:
 - [ ] 实现类型索引解析
 - [ ] 编写测试 (解析编译后的 .win/.dwo 对象)
 
-### Phase 4: P-Code 反编译引擎 (预计 8-10 小时)
+### Phase 4: P-Code 还原引擎 (预计 8-10 小时)
 
 - [ ] 定义 4 个版本的指令长度表和操作码映射
 - [ ] 实现 InstructionDecoder (字节流 → CodeLine)
@@ -1263,7 +1263,7 @@ pb export app.pbl ./out
 # 新增命令
 pb list app.pbd              # 列出编译库对象
 pb list app.exe              # 列出 EXE 中嵌入的对象
-pb decompile app.pbd w_main  # 反编译指定对象
+pb decompile app.pbd w_main  # 还原指定对象
 pb inspect app.pbd d_emp     # 查看编译对象结构 (变量/函数/类型)
 pb extract app.exe ./pbd_out # 提取 EXE 中的 PBD 资源
 ```
@@ -1275,7 +1275,7 @@ pb extract app.exe ./pbd_out # 提取 EXE 中的 PBD 资源
 | 风险 | 影响 | 缓解措施 |
 |------|------|---------|
 | PE 资源节格式变体 | EXE 解析失败 | 严格参考 PbdViewer PEHelper.cs (1381 行)，覆盖多种 PE 变体 |
-| P-code 指令集不完整 | 反编译失败/乱码 | 未知操作码输出注释行 `// OP_xxx`，不中断 |
+| P-code 指令集不完整 | 还原失败/乱码 | 未知操作码输出注释行 `// OP_xxx`，不中断 |
 | typedef .bin 位置不确定 | 类型名解析失败 | 回退到内置类型表 (BUILTIN_TYPES)，功能降级不中断 |
 | ANSI PBL comment 编码 | 中文注释乱码 | 尝试 latin-1 → cp1252 → gbk → utf-8 编码链 |
 | 编译对象内部结构未完全逆向 | 部分字段解析错误 | 标记为 "unknown"，不影响其他字段 |
@@ -1298,7 +1298,7 @@ pb extract app.exe ./pbd_out # 提取 EXE 中的 PBD 资源
 | ENT* 内容 | .sr* 源码文本 | .win/.dwo 等编译二进制 |
 | DAT* 编码 | UTF-16LE (PB12+) 或 ANSI | P-code 字节码 |
 | Comment 字段 | 含类型关键字 | 含类型关键字 |
-| 可导出 | 源码文本 | 编译二进制 (需反编译) |
+| 可导出 | 源码文本 | 编译二进制 (需还原) |
 | 用途 | 开发时 | 运行时 (机器码加速) |
 
 ## 附录 C: 测试验证
@@ -1335,7 +1335,7 @@ v1.4-v1.9 (Python) ─── 通用解析能力渐进增强
       ├─ Phase 1: ChunkEngine 重构 (ENT* comment 修复 + 内存模式)
       ├─ Phase 2: PEExtractor (EXE/DLL → PBD 提取)
       ├─ Phase 3: BinaryEntryParser (编译对象结构解析)
-      ├─ Phase 4: P-Code 反编译引擎 (PB9-PB11+ 四版本指令集)
+      ├─ Phase 4: P-Code 还原引擎 (PB9-PB11+ 四版本指令集)
       ├─ Phase 5: UniversalParser 集成 (统一入口)
       └─ Phase 6: TypedefLoader + 文档完善
       │
@@ -1358,4 +1358,4 @@ v2.0 (Rust) ─── 全新重写，性能重构
 | **依赖** | 零外部依赖 (stdlib only) | 零外部依赖 (no_std 可选) |
 | **性能** | I/O 密集，秒级可接受 | CPU 密集，毫秒级响应 |
 | **分发** | `pip install -e .` | 编译二进制 / PyO3 wheel |
-| **适用** | 开发/调试/单文件分析 | 批量处理/IDE 集成/实时反编译 |
+| **适用** | 开发/调试/单文件分析 | 批量处理/IDE 集成/实时代码还原 |

@@ -307,7 +307,47 @@ def _export_binary_project(info, out_dir: Path, project_name: str, args) -> tupl
             print(f"    -> ERROR: {e}", file=sys.stderr)
             failed += 1
 
+    if not args.no_readme and total > 0:
+        _write_binary_project_readme(out_dir, info, project_name, total)
+
     return total, failed
+
+
+def _write_binary_project_readme(out_dir: Path, info, project_name: str, total: int):
+    """Write README.md for binary project export (EXE/PBD/DLL decompiled)."""
+    from datetime import datetime
+
+    # Collect all binary sources
+    sources = []
+    for exe in info.embedded_pbd_exes:
+        sources.append(f"{exe.name} (EXE, 内嵌 PBD)")
+    for pbd in info.pbd_files:
+        sources.append(f"{pbd.name} (独立 PBD)")
+    for dll in info.embedded_pbd_dlls:
+        sources.append(f"{dll.name} (DLL, 内嵌 PBD)")
+
+    lines = [
+        f"# {project_name} — 项目源码目录",
+        "",
+        f"> 从 {len(sources)} 个文件梳理导出，共 {total} 个文件",
+        f"> 导出时间: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        "",
+        "## 源文件",
+        "",
+    ]
+    for src in sources:
+        lines.append(f"- `{src}`")
+    lines.extend([
+        "",
+        "## 说明",
+        "",
+        "- 从编译后的 EXE/PBD/DLL 梳理导出的 PowerScript 源码",
+        "- 子目录 `*.pbl/` 为按命名惯例推断的 PBL 分组（非原始 PBL 文件）",
+        "- 文件后缀默认 `.ps`（可用 `--suffix` 自定义）",
+        "- **工具**: pb-devkit (`pb autoexport`)",
+    ])
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "README.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 def _export_mixed_project(info, out_dir: Path, project_name: str, args) -> tuple:
@@ -396,13 +436,13 @@ def _write_mixed_project_readme(out_dir: Path, info, project_name: str, total: i
     lines = [
         f"# {project_name} — 源码目录（混合模式）",
         "",
-        f"> PBL 源码 + 反编译二进制，共导出 {total} 个文件",
+        f"> PBL 源码 + 梳理导出二进制，共导出 {total} 个文件",
         f"> 导出时间: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         "",
         "## 说明",
         "",
         "- **PBL 源码目录**（子目录名 = PBL 文件名）: 以源码 PBL 为权威来源",
-        "- **`_decompiled/`**: 从 EXE/PBD 反编译的源码（仅供参考）",
+        "- **`_decompiled/`**: 从 EXE/PBD 梳理导出的源码（仅供参考）",
         "- **工具**: pb-devkit (`pb autoexport`)",
     ]
     out_dir.mkdir(parents=True, exist_ok=True)

@@ -1,6 +1,6 @@
 # PB DevKit - PowerBuilder Legacy System Toolkit
 
-> 不用打开 PowerBuilder IDE，在命令行完成 PBL 源码导出、反编译、分析、重构、搜索、报告、DataWindow解析、导入、编译全流程。
+> 不用打开 PowerBuilder IDE，在命令行完成 PBL 源码导出、代码梳理、分析、重构、搜索、报告、DataWindow解析、导入、编译全流程。
 > 适用于 **PB5 ~ PB12.6** 全系列版本（ANSI + Unicode 均支持）。
 >
 > **Python API**：纯标准库实现，零外部依赖，`pip install` 非必需。
@@ -53,10 +53,10 @@ python pb.py export F:\path\to\project ./src --by-type
 python pb.py export app.exe -o ./src --pbl-tree
 python pb.py export app.exe -o ./src --pbl-tree --project-name myapp
 
-# 3. 从 EXE/PBD 反编译回 PowerScript（无需源码）
-python pb.py decompile app.exe --list           # 列出所有可反编译的对象
-python pb.py decompile app.exe --output ./src   # 全量反编译，写入 .ps 文件
-python pb.py decompile app.exe --entry w_login  # 反编译单个对象
+# 3. 从 EXE/PBD 梳理导出 PowerScript 源码
+python pb.py decompile app.exe --list           # 列出所有可导出的对象
+python pb.py decompile app.exe --output ./src   # 全量导出，写入 .ps 文件
+python pb.py decompile app.exe --entry w_login  # 导出单个对象
 
 # 4. 项目全面审查报告（结构 + 质量 + DW + 建议）
 python pb.py review ./src
@@ -142,9 +142,9 @@ python pb.py build module.pbl appname --exe module.exe
 | `pb list <pbl_or_dir>` | 列出 PBL 中的对象 | 可选 |
 | `pb export <pbl_or_dir> [out]` | 导出 PBL 源码为 .sr* 文件 | 可选 |
 | `pb export ... --by-type` | 按对象类型分子目录导出（推荐） | 可选 |
-| `pb export <exe> -o <dir> --pbl-tree` | EXE/PBD 反编译并按 PBL 组织导出 | 否 |
+| `pb export <exe> -o <dir> --pbl-tree` | EXE/PBD 代码梳理并按 PBL 组织导出 | 否 |
 | `pb autoexport <dir>` | **智能全量导出**：自动检测 PBL/EXE/PBD 类型 + 导出到 src/ | 否 |
-| `pb decompile <exe/pbd/pbl>` | **反编译**编译产物回 PowerScript | 否 |
+| `pb decompile <exe/pbd/pbl>` | **代码梳理**编译产物 → PowerScript | 否 |
 | `pb analyze <dir>` | 代码质量分析 | 否 |
 | `pb analyze-project <dir>` | 完整项目分析（依赖图+复杂度，自动检测 PBL tree） | 否 |
 | `pb search <pattern> <dir>` | 全文搜索（文本/SQL/函数） | 否 |
@@ -215,7 +215,7 @@ pb-devkit/
 │   ├── sr_parser.py               # .sr* 源码解析 + 分析（质量/依赖/复杂度）
 │   ├── pborca_engine.py           # PBORCA DLL 封装（含优雅降级）
 │   ├── pe_extractor.py            # PE EXE/DLL → 提取内嵌 PBD
-│   ├── decompiler.py              # PBD/PBL/EXE 反编译 → PowerScript
+│   ├── decompiler.py              # PBD/PBL/EXE 代码梳理 → PowerScript
 │   ├── refactoring.py             # 自动重构引擎（5 条规则）
 │   ├── config.py                  # 项目级配置（.pbdevkit.json）
 │   └── __init__.py                # 公共 API 导出
@@ -483,26 +483,26 @@ results = engine.run("./exported", dry_run=True)
 # 加载项目配置
 config = PBConfig.load()
 
-# 从 EXE/PBD/PBL 反编译回 PowerScript（无需源码）
+# 从 EXE/PBD/PBL 梳理导出 PowerScript 源码
 from pb_devkit.decompiler import decompile_file, list_entries, DecompileResult
 
-# 列出所有可反编译对象
+# 列出所有可导出对象
 entries = list_entries("app.exe")   # ['w_login.win', 'w_main.win', ...]
 
-# 反编译全部
+# 全量导出
 results = decompile_file("app.exe", decompile_all=True)
 for r in results:
     if r.success:
         print(r.entry_name, "->", len(r.source), "chars")
 
-# 反编译单个对象
+# 导出单个对象
 [r] = decompile_file("app.exe", entry_name="w_login")
 print(r.source)
 
 # EXE → PBL Tree 导出（自动推断 PBL 分组）
 from pb_devkit.pbl_grouper import export_pbl_tree, infer_pbl_groups
 
-# 全量导出：反编译 + 按 PBL 分组
+# 全量导出：代码梳理 + 按 PBL 分组
 stats = export_pbl_tree("app.exe", "./src", project_name="myapp")
 print(f"Saved: {stats.total_saved}, PBLs: {list(stats.pbl_files.keys())}")
 

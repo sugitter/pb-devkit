@@ -791,7 +791,7 @@ def _generate_suggestions(proj: dict, quality: dict, dw: dict, deps: dict) -> li
     # Compilation
     if not proj.get("pbl_files") and (proj.get("exe_files") or proj.get("pbd_files")):
         suggestions.append(
-            "项目只有编译产物（EXE/PBD），没有 PBL 源码。建议使用 `pb autoexport` 反编译后，"
+            "项目只有编译产物（EXE/PBD），没有 PBL 源码。建议使用 `pb autoexport` 梳理导出后，"
             "再通过 `pb import` + `pb build` 进行二次开发和编译。"
         )
 

@@ -89,7 +89,8 @@ python pb.py <command> [options]
 | `pb workflow <pbl> [dir]` | 全流程：导出→分析→重构 | 否 |
 | `pb snapshot <dir>` | 快照对比（保存/比较源码快照） | 否 |
 | `pb decompile <exe/pbd/pbl>` | **代码梳理**编译产物 → PowerScript | 否 |
-| `pb autoexport <dir>` | **★ 智能检测项目类型+全量导出**到 src/ | 否 |
+| `pb decompile ... --resources <dir>` | 导出源码 + 提取图片/图标等资源 | 否 |
+| `pb autoexport <dir>` | **★ 智能检测项目类型+全量导出**到 src/（含 resources/） | 否 |
 | `pb import <pbl> <dir>` | 导入 .sr* 文件到 PBL | 是 |
 | `pb build <pbl> <app>` | 全量重建应用 | 是 |
 | `pb compile <pbl> <dir>` | 导入+重建一步完成 | 是 |
@@ -385,7 +386,7 @@ python pb.py decompile app.exe --tree
 - 支持 `.exe`（内嵌 PBD）、`.pbd`、`.pbl`（含编译数据）
 - 输出为 `.ps` 格式（PowerScript），含窗口声明、变量、事件脚本
 - 中文 GBK 字符串自动正确解码（UTF-8 输出）
-- 图片/资源等二进制条目自动跳过
+- 图片/图标等资源可通过 `--resources` 参数导出到指定目录
 
 **Python API 直接调用：**
 

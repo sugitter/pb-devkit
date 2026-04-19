@@ -57,6 +57,7 @@ python pb.py export app.exe -o ./src --pbl-tree --project-name myapp
 python pb.py decompile app.exe --list           # 列出所有可导出的对象
 python pb.py decompile app.exe --output ./src   # 全量导出，写入 .ps 文件
 python pb.py decompile app.exe --entry w_login  # 导出单个对象
+python pb.py decompile app.exe --output ./src --resources ./resources  # 导出源码 + 资源
 
 # 4. 项目全面审查报告（结构 + 质量 + DW + 建议）
 python pb.py review ./src
@@ -145,6 +146,7 @@ python pb.py build module.pbl appname --exe module.exe
 | `pb export <exe> -o <dir> --pbl-tree` | EXE/PBD 代码梳理并按 PBL 组织导出 | 否 |
 | `pb autoexport <dir>` | **智能全量导出**：自动检测 PBL/EXE/PBD 类型 + 导出到 src/ | 否 |
 | `pb decompile <exe/pbd/pbl>` | **代码梳理**编译产物 → PowerScript | 否 |
+| `pb decompile ... --resources <dir>` | 导出源码 + 提取图片/图标等资源文件 | 否 |
 | `pb analyze <dir>` | 代码质量分析 | 否 |
 | `pb analyze-project <dir>` | 完整项目分析（依赖图+复杂度，自动检测 PBL tree） | 否 |
 | `pb search <pattern> <dir>` | 全文搜索（文本/SQL/函数） | 否 |
@@ -498,6 +500,13 @@ for r in results:
 # 导出单个对象
 [r] = decompile_file("app.exe", entry_name="w_login")
 print(r.source)
+
+# 提取资源（图片、图标等）
+from pb_devkit.decompiler import extract_resources, list_resource_entries
+res_entries = list_resource_entries("app.exe")   # ['bmp\\logo.gif', ...]
+results = extract_resources("app.exe", "./resources")  # 保存到目录
+for r in results:
+    print(f"{r.entry_name}: {r.size:,} bytes")
 
 # EXE → PBL Tree 导出（自动推断 PBL 分组）
 from pb_devkit.pbl_grouper import export_pbl_tree, infer_pbl_groups

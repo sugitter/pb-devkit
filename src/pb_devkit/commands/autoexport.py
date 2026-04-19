@@ -72,7 +72,7 @@ def register(sub: argparse.ArgumentParser) -> argparse.ArgumentParser:
     p.add_argument(
         "--suffix",
         default=".ps",
-        help="File suffix for decompiled entries (default: .ps)",
+        help="File suffix for exported entries (default: .ps)",
     )
     p.add_argument(
         "--by-type",
@@ -176,6 +176,12 @@ def run(args):
             info, out_dir, project_name, args
         )
 
+    # --- Step 3.5: Extract resources ---
+    res_count = _extract_all_resources(info, out_dir)
+    if res_count > 0:
+        total_exported += res_count
+        print(f"\n  Resources extracted: {res_count} files → {out_dir / 'resources'}")
+
     # --- Summary ---
     print(f"\n[3/3] Complete")
     print(f"{'='*60}")
@@ -191,6 +197,49 @@ def run(args):
 # ---------------------------------------------------------------------------
 # Export strategies
 # ---------------------------------------------------------------------------
+
+def _extract_all_resources(info, out_dir: Path) -> int:
+    """Extract binary resources (images, icons) from all EXE/PBD/PBL files.
+
+    Returns the number of resource files extracted.
+    """
+    from pb_devkit.decompiler import extract_resources, is_resource_entry, list_resource_entries
+
+    # Collect all binary files that may contain resources
+    binary_files = []
+    for p in info.embedded_pbd_exes:
+        binary_files.append(p)
+    for p in info.pbd_files:
+        binary_files.append(p)
+    for p in info.embedded_pbd_dlls:
+        binary_files.append(p)
+    # Also check PBL files
+    for p in info.pbl_files:
+        binary_files.append(p)
+
+    if not binary_files:
+        return 0
+
+    res_dir = out_dir / "resources"
+    total = 0
+
+    for fpath in sorted(binary_files):
+        try:
+            # First check if the file has any resource entries
+            res_list = list_resource_entries(str(fpath))
+            if not res_list:
+                continue
+            # Extract
+            results = extract_resources(str(fpath), str(res_dir))
+            ok = sum(1 for r in results if r.success)
+            total += ok
+            if ok:
+                print(f"\n  Resources from {fpath.name}: {ok} files")
+        except Exception:
+            pass  # Silently skip files that don't support resource extraction
+
+    return total
+
 
 def _export_pbl_project(info, out_dir: Path, project_name: str, args) -> tuple:
     """Export a PBL source project.
@@ -343,6 +392,7 @@ def _write_binary_project_readme(out_dir: Path, info, project_name: str, total: 
         "",
         "- 从编译后的 EXE/PBD/DLL 梳理导出的 PowerScript 源码",
         "- 子目录 `*.pbl/` 为按命名惯例推断的 PBL 分组（非原始 PBL 文件）",
+        "- `resources/` 目录包含项目中的图标、图片等资源文件",
         "- 文件后缀默认 `.ps`（可用 `--suffix` 自定义）",
         "- **工具**: pb-devkit (`pb autoexport`)",
     ])
@@ -424,6 +474,7 @@ def _write_pbl_project_readme(out_dir: Path, info, project_name: str, total: int
         "- 每个子目录对应一个原始 PBL 文件",
         "- 文件后缀: `.srw` = 窗口, `.srd` = 数据窗口, `.srm` = 菜单, "
         "`.srf` = 函数, `.srs` = 结构体, `.sru` = 用户对象",
+        "- `resources/` 目录包含项目中的图标、图片等资源文件",
         "- **工具**: pb-devkit (`pb autoexport`)",
     ])
     out_dir.mkdir(parents=True, exist_ok=True)

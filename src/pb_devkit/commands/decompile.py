@@ -40,6 +40,11 @@ def register(sub: argparse.ArgumentParser) -> argparse.ArgumentParser:
         default=".ps",
         help="File suffix for saved decompiled files (default: .ps)"
     )
+    p.add_argument(
+        "--resources", "-r",
+        metavar="DIR",
+        help="Extract binary resources (images/icons) to this directory"
+    )
     return p
 
 
@@ -47,7 +52,7 @@ def run(args):
     """Run the decompile command."""
     from pb_devkit.decompiler import (
         decompile_file, list_entries, get_tree_str,
-        DecompileResult
+        DecompileResult, extract_resources, list_resource_entries
     )
 
     target = Path(args.target)
@@ -133,3 +138,26 @@ def run(args):
         if skipped:
             summary += f", {skipped} skipped"
         print(f"\n{summary}.", file=sys.stderr)
+
+    # ---- Resource extraction ----
+    if args.resources:
+        res_dir = args.resources
+        print(f"\n[info] Extracting resources to {res_dir}...", file=sys.stderr)
+        res_results = extract_resources(target_path, res_dir)
+        res_ok = sum(1 for r in res_results if r.success)
+        res_fail = sum(1 for r in res_results if not r.success)
+        if res_ok:
+            # Group by subdirectory for nice output
+            dirs = set()
+            for r in res_results:
+                if r.success:
+                    parts = r.entry_name.replace('\\', '/').split('/')
+                    if len(parts) > 1:
+                        dirs.add(parts[0])
+            if dirs:
+                print(f"  Resource directories: {', '.join(sorted(dirs))}")
+            total_size = sum(r.size for r in res_results if r.success)
+            print(f"  {res_ok} files extracted ({total_size:,} bytes)")
+        if res_fail:
+            print(f"  {res_fail} failed", file=sys.stderr)
+        print(f"[done] Resources saved to {res_dir}.", file=sys.stderr)

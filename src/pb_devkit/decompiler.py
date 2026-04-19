@@ -2128,6 +2128,38 @@ class DecompileResult:
     error: str = None
 
 
+@dataclass
+class ResourceResult:
+    """Result of a resource extraction operation."""
+    entry_name: str
+    data: bytes
+    size: int = 0
+    is_binary: bool = True
+    success: bool = True
+    error: str = None
+
+    def __post_init__(self):
+        if self.data:
+            self.size = len(self.data)
+
+
+# Recognized resource extensions (image/icon/binary resources)
+RESOURCE_EXTENSIONS = frozenset({
+    'bmp', 'gif', 'jpg', 'jpeg', 'png', 'ico', 'cur', 'wmf', 'emf',
+    'tif', 'tiff', 'pcx', 'tga', 'webp',
+})
+
+
+def is_resource_entry(entry_name: str) -> bool:
+    """Check if an entry name looks like a resource (has path separator or known resource extension)."""
+    # Entries with path separators (e.g. "bmp\logo.gif") are resources
+    if '\\' in entry_name or '/' in entry_name:
+        return True
+    # Known resource extensions
+    ext = entry_name.rsplit('.', 1)[-1].lower() if '.' in entry_name else ''
+    return ext in RESOURCE_EXTENSIONS
+
+
 def decompile_file(file_path: str, entry_name: str = None,
                    decompile_all: bool = True) -> list:
     """
@@ -2203,6 +2235,77 @@ def list_entries(file_path: str) -> list:
         for pbf in project.files:
             for e in sorted(pbf.entries, key=lambda e: e.entry_name):
                 names.append(e.entry_name)
+        return names
+    except Exception:
+        return []
+
+
+def extract_resources(file_path: str, output_dir: str = None) -> list:
+    """
+    Extract binary resources (images, icons, etc.) from a PBD/PBL/EXE file.
+
+    Args:
+        file_path: Path to .pbd, .pbl, or .exe file
+        output_dir: Directory to save extracted files (None = return data only)
+
+    Returns:
+        List[ResourceResult] with extracted resource data
+    """
+    results = []
+    try:
+        project = PbProject(file_path)
+    except Exception as e:
+        return [ResourceResult(entry_name="", data=b"", success=False, error=str(e))]
+
+    out_path = Path(output_dir) if output_dir else None
+    if out_path:
+        out_path.mkdir(parents=True, exist_ok=True)
+
+    for pbf in project.files:
+        for entry in sorted(pbf.entries, key=lambda e: e.entry_name):
+            if not is_resource_entry(entry.entry_name):
+                continue
+            try:
+                # Use _entry_data directly - it's the raw binary
+                data = entry._entry_data if hasattr(entry, '_entry_data') else b''
+                if not data:
+                    results.append(ResourceResult(
+                        entry_name=entry.entry_name, data=b'',
+                        success=False, error="empty data"
+                    ))
+                    continue
+
+                rr = ResourceResult(entry_name=entry.entry_name, data=data)
+
+                if out_path:
+                    # Normalize path: "bmp\logo.gif" -> "bmp/logo.gif"
+                    safe_name = entry.entry_name.replace('\\', '/')
+                    # Remove leading slash if present
+                    safe_name = safe_name.lstrip('/')
+                    dest = out_path / safe_name
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    dest.write_bytes(data)
+                    rr.success = True
+
+                results.append(rr)
+            except Exception as e:
+                results.append(ResourceResult(
+                    entry_name=entry.entry_name, data=b'',
+                    success=False, error=str(e)
+                ))
+
+    return results
+
+
+def list_resource_entries(file_path: str) -> list:
+    """List only resource entries (images, icons, etc.) in a PBD/PBL file."""
+    try:
+        project = PbProject(file_path)
+        names = []
+        for pbf in project.files:
+            for e in sorted(pbf.entries, key=lambda e: e.entry_name):
+                if is_resource_entry(e.entry_name):
+                    names.append(e.entry_name)
         return names
     except Exception:
         return []

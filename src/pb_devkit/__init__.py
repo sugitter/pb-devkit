@@ -27,14 +27,18 @@ Quick Start:
 
 CLI Usage:
     python pb.py init <project_dir>
-    python pb.py export <pbl_or_exe> [output]          # PBL export or EXE decompile
+    python pb.py export <pbl_or_exe> [output]          # PBL export or EXE code export
     python pb.py export <exe> --pbl-tree [output]      # Infer PBL grouping
-    python pb.py decompile <exe> --output ./src        # Decompile to .ps files
+    python pb.py decompile <exe> --output ./src        # Export to .ps files
+    python pb.py decompile <exe> --resources ./res     # Export + extract resources
+    python pb.py autoexport <project_dir>              # Smart auto-detect + full export
     python pb.py analyze-project <source_dir>          # Auto-detect PBL tree
     python pb.py analyze-project <src> --html report.html
     python pb.py search <pattern> <source_dir>
     python pb.py stats <source_dir>
     python pb.py report <source_dir>
+    python pb.py review <source_dir>                   # Comprehensive review report
+    python pb.py dw <source_dir>                       # DataWindow analysis
 """
 __version__ = "1.5.0"
 

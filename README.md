@@ -1,10 +1,10 @@
 # PB DevKit - PowerBuilder Legacy System Toolkit
 
-> 不用打开 PowerBuilder IDE，在命令行完成 PBL 源码导出、反编译、分析、重构、搜索、报告、导入、编译全流程。
-> 适用于 PB4 ~ PB2025 全系列版本。
+> 不用打开 PowerBuilder IDE，在命令行完成 PBL 源码导出、反编译、分析、重构、搜索、报告、DataWindow解析、导入、编译全流程。
+> 适用于 **PB5 ~ PB12.6** 全系列版本（ANSI + Unicode 均支持）。
 >
-> **Python API**：`pip install` 无需，纯标准库实现（零外部依赖）。
-> **68 个单元测试全部通过**。
+> **Python API**：纯标准库实现，零外部依赖，`pip install` 非必需。
+> **68 个单元测试全部通过**（49 核心 + 19 PEExtractor）。
 
 ## 为什么需要这个工具
 
@@ -42,38 +42,56 @@ python pb.py init F:\path\to\project --json
 # 1. 列出项目中所有 PBL 的对象
 python pb.py list F:\path\to\project
 
-# 2. 导出所有 PBL 源码（推荐 --by-type 按类型分目录）
+# 2a. 智能全量导出（自动检测 PBL/EXE/PBD，推荐入手点）
+python pb.py autoexport F:\path\to\project
+python pb.py autoexport F:\path\to\project --detect   # 仅检测类型，不导出
+
+# 2b. 手动导出 PBL 源码（--by-type 按类型分目录）
 python pb.py export F:\path\to\project ./src --by-type
 
-# 2a. 从 EXE 导出并按推断的 PBL 组织（推荐用于无 PBL 的场景）
+# 2c. 从 EXE 导出并按推断的 PBL 组织（用于无 PBL 的场景）
 python pb.py export app.exe -o ./src --pbl-tree
 python pb.py export app.exe -o ./src --pbl-tree --project-name myapp
 
-# 3. 完整项目分析（依赖关系 + 复杂度 + 质量报告）
-python pb.py analyze-project ./src --json
-
-# 4. 全文搜索
-python pb.py search "employee" ./src --mode sql
-python pb.py search "uf_login" ./src --mode function -t WIN
-
-# 5. 自动重构（预览 → 应用）
-python pb.py refactor ./src/module -v
-python pb.py refactor ./src/module --apply -v
-
-# 6. 生成 Markdown 分析报告
-python pb.py report ./src -o ./CODE_REVIEW.md
-
-# 7. 一键全流程
-python pb.py workflow F:\path\to\project\module.pbl --apply
-
-# 8. 从 EXE/PBD 反编译回 PowerScript（无需源码）
+# 3. 从 EXE/PBD 反编译回 PowerScript（无需源码）
 python pb.py decompile app.exe --list           # 列出所有可反编译的对象
 python pb.py decompile app.exe --output ./src   # 全量反编译，写入 .ps 文件
 python pb.py decompile app.exe --entry w_login  # 反编译单个对象
 
-# 9. 导入修改后的源码（需要 PBSpyORCA.dll）
+# 4. 项目全面审查报告（结构 + 质量 + DW + 建议）
+python pb.py review ./src
+python pb.py review ./src --html -o review.html
+
+# 5. DataWindow 专项解析（SQL / 表 / 列 / 引用关系）
+python pb.py dw ./src                           # 终端概览
+python pb.py dw ./src --sql                     # 输出所有 DW SQL
+python pb.py dw ./src --tables                  # 反推数据库表结构
+python pb.py dw ./src --html -o dw_report.html  # 交互式 HTML 报告
+python pb.py dw ./src --json                    # JSON 输出
+python pb.py dw ./src --filter "d_order*"       # 过滤指定 DW
+
+# 6. 完整项目分析（依赖关系 + 复杂度 + 质量报告）
+python pb.py analyze-project ./src --json
+
+# 7. 全文搜索
+python pb.py search "employee" ./src --mode sql
+python pb.py search "uf_login" ./src --mode function -t WIN
+
+# 8. 自动重构（预览 → 应用）
+python pb.py refactor ./src/module -v
+python pb.py refactor ./src/module --apply -v
+
+# 9. 生成 Markdown 分析报告
+python pb.py report ./src -o ./CODE_REVIEW.md
+
+# 10. 一键全流程（导出 → 分析 → 重构）
+python pb.py workflow F:\path\to\project\module.pbl --apply
+
+# 11. 导入修改后的源码 + 编译（需要 PBSpyORCA.dll）
 python pb.py import module.pbl ./src
-python pb.py build module.pbl appname
+python pb.py build module.pbl appname --mode exe           # 单 EXE
+python pb.py build module.pbl appname --mode exe+pbd       # EXE + PBD 分离
+python pb.py build module.pbl appname --mode exe+dll       # EXE + DLL 分离
 ```
 
 ### 项目配置
@@ -125,43 +143,83 @@ python pb.py build module.pbl appname --exe module.exe
 | `pb export <pbl_or_dir> [out]` | 导出 PBL 源码为 .sr* 文件 | 可选 |
 | `pb export ... --by-type` | 按对象类型分子目录导出（推荐） | 可选 |
 | `pb export <exe> -o <dir> --pbl-tree` | EXE/PBD 反编译并按 PBL 组织导出 | 否 |
+| `pb autoexport <dir>` | **智能全量导出**：自动检测 PBL/EXE/PBD 类型 + 导出到 src/ | 否 |
+| `pb decompile <exe/pbd/pbl>` | **反编译**编译产物回 PowerScript | 否 |
 | `pb analyze <dir>` | 代码质量分析 | 否 |
 | `pb analyze-project <dir>` | 完整项目分析（依赖图+复杂度，自动检测 PBL tree） | 否 |
 | `pb search <pattern> <dir>` | 全文搜索（文本/SQL/函数） | 否 |
 | `pb stats <dir>` | 项目统计仪表盘 | 否 |
 | `pb report <dir>` | 生成 Markdown 分析报告 | 否 |
+| `pb review <dir>` | **综合审查报告**（结构/质量/DW清单/改进建议），支持 --html | 否 |
+| `pb dw <dir>` | **DataWindow 专项**：SQL提取/表结构反推/引用关系，支持 --html | 否 |
 | `pb refactor <dir>` | 自动重构（支持 dry-run） | 否 |
 | `pb diff <dir1> <dir2>` | 比较两份源码 | 否 |
 | `pb workflow <pbl> [dir]` | 全流程：导出→分析→重构 | 否 |
 | `pb snapshot <dir>` | 快照对比（保存/比较源码快照） | 否 |
-| `pb decompile <exe/pbd/pbl>` | **反编译** 编译产物回 PowerScript | 否 |
 | `pb import <pbl> <dir>` | 导入 .sr* 文件到 PBL | 是 |
-| `pb build <pbl> <app>` | 全量重建应用 | 是 |
+| `pb build <pbl> <app> --mode <mode>` | 全量重建应用（三种编译模式） | 是 |
 | `pb compile <pbl> <dir>` | 导入+重建一步完成 | 是 |
 
 **所有命令支持 `--json` 输出结构化 JSON。**
 
+---
+
+## pb build — 三种编译模式
+
+| 模式 | 命令 | 说明 |
+|------|------|------|
+| `exe`（默认） | `--mode exe` | 全部 PBD 内嵌 EXE，单文件发布 |
+| `exe+pbd` | `--mode exe+pbd` | EXE + 分离 PBD 运行时文件 |
+| `exe+dll` | `--mode exe+dll` | EXE + PowerBuilder DLL 组件库 |
+
+```bash
+# 单 EXE（最简发布，适合小项目）
+python pb.py build app.pbl myapp --mode exe --exe myapp.exe
+
+# EXE + PBD（主程序 + 运行时分离，适合多模块项目）
+python pb.py build app.pbl myapp --mode exe+pbd \
+  --lib-list "app.pbl;lib1.pbl;lib2.pbl" --pbd-libs "lib1,lib2"
+
+# EXE + DLL（组件化，适合插件式架构）
+python pb.py build app.pbl myapp --mode exe+dll \
+  --lib-list "app.pbl;lib1.pbl" --dll-libs "lib1"
+
+# 附加选项
+python pb.py build ... --machine-code   # 机器码编译（更快运行速度）
+python pb.py build ... --icon app.ico   # 指定 EXE 图标
+python pb.py build ... --rebuild-only   # 只重建不生成 EXE
+```
+
 ## 技术架构
+
+### 整体结构
 
 ```
 pb-devkit/
-├── pb.py                          # CLI 入口（18 个命令）
+├── pb.py                          # CLI 入口（20 个命令）
 ├── pyproject.toml                 # 包元数据
 ├── src/pb_devkit/
 │   ├── cli.py                     # pip install 后的 pb 命令入口
 │   ├── commands/                  # CLI 命令处理（每命令一文件）
-│   ├── pbl_parser.py              # PBL 二进制格式解析器（PB4-PB12+）
+│   │   ├── doctor.py / init.py / list.py / export.py
+│   │   ├── analyze.py / analyze_project.py / search.py / stats.py
+│   │   ├── report.py / review.py / dw.py   ← 报告 & 审查
+│   │   ├── refactor.py / diff.py / workflow.py / snapshot.py
+│   │   ├── import_.py / build.py / compile.py   ← 编译链
+│   │   ├── decompile.py / autoexport.py
+│   │   └── __init__.py
+│   ├── pbl_parser.py              # PBL 二进制格式解析器（PB5-PB12.6）
 │   ├── chunk_engine.py            # ChunkEngine 通用 PBL 解析引擎
 │   ├── pbl_grouper.py             # PBL 分组推断 + 结构化导出（--pbl-tree）
-│   ├── sr_parser.py               # .sr* 源码解析 + 分析
+│   ├── project_detector.py        # 项目类型自动检测（PBL/EXE/PBD/混合）
+│   ├── sr_parser.py               # .sr* 源码解析 + 分析（质量/依赖/复杂度）
 │   ├── pborca_engine.py           # PBORCA DLL 封装（含优雅降级）
 │   ├── pe_extractor.py            # PE EXE/DLL → 提取内嵌 PBD
 │   ├── decompiler.py              # PBD/PBL/EXE 反编译 → PowerScript
-│   ├── resoures/                  # 反编译器资源（PB 类型定义 .bin）
 │   ├── refactoring.py             # 自动重构引擎（5 条规则）
 │   ├── config.py                  # 项目级配置（.pbdevkit.json）
 │   └── __init__.py                # 公共 API 导出
-├── orca/                          # PBSpyORCA.dll（需手动下载）
+├── orca/                          # PBSpyORCA.dll（需手动下载，可选）
 ├── tests/
 │   └── test_pb_devkit.py          # 68 个单元测试
 ├── SKILL.md                       # WorkBuddy Skill 描述
@@ -169,7 +227,32 @@ pb-devkit/
 └── .gitignore
 ```
 
+### 版本支持矩阵
+
+| PB 版本 | 格式 | HDR* 大小 | 编码 | 支持状态 |
+|---------|------|----------|------|---------|
+| PB 5.0 ~ 9.x | ANSI | 512 bytes | 系统默认/GB2312 | ✅ 完全支持 |
+| PB 10.0 ~ 12.6 | Unicode | 1024 bytes | UTF-16LE | ✅ 完全支持 |
+| EXE/PBD（内嵌） | PE 格式 | — | — | ✅ PEExtractor 支持 |
+
+### 核心引擎
+
+```
+纯 Python 零依赖
+├── ChunkEngine      ── HDR*/NOD*/ENT*/DAT* 完整二进制解析
+├── PEExtractor      ── PE EXE/DLL → 内嵌 PBD 资源提取
+├── SRFileParser     ── .sr*/.ps 源码结构化解析
+├── PBSourceAnalyzer ── 代码质量 10 条规则，可配置
+├── DependencyAnalyzer── 跨 PBL 对象引用图
+├── ComplexityAnalyzer── 圈复杂度计算
+├── DWParser         ── DataWindow SQL/表/列/检索参数解析
+├── RefactoringEngine── 自动重构（5 条规则，dry-run 支持）
+└── PBORCAEngine     ── ORCA DLL 调用，优雅降级（无 DLL 时只读）
+```
+
 ## 工作流程
+
+### 完整维护流程
 
 ```
 PBL (二进制库)               EXE / PBD (编译产物)
@@ -182,7 +265,13 @@ PBL (二进制库)               EXE / PBD (编译产物)
   │                      │        │
   │                      └────────┤
   │                               │
-  │                         编辑/搜索/重构/审查
+  │                     ┌─────────┴──────────┐
+  │                     │                    │
+  │                  review                  dw
+  │             (综合审查报告)        (DataWindow专项)
+  │              HTML / MD            SQL/表/引用/HTML
+  │                     │                    │
+  │                     └─────────┬──────────┘
   │                               │
   │                    ┌──────────┤
   │                    │          │
@@ -194,8 +283,36 @@ PBL (二进制库)               EXE / PBD (编译产物)
   └─[PBORCA DLL]──────────────────┘
        │
        ├─ import → 写入 PBL
-       ├─ build → 全量编译
-       └─ build --exe → 生成 EXE
+       ├─ build --mode exe → 单 EXE
+       ├─ build --mode exe+pbd → EXE + PBD
+       └─ build --mode exe+dll → EXE + DLL
+```
+
+### 推荐入门流程（从零开始）
+
+```bash
+# Step 1：诊断环境
+python pb.py doctor F:\project
+
+# Step 2：智能全量导出（自动识别项目类型）
+python pb.py autoexport F:\project
+
+# Step 3：综合审查，生成 HTML 报告
+python pb.py review F:\project\src --html -o review.html
+
+# Step 4：DataWindow 专项分析（反推数据库表结构）
+python pb.py dw F:\project\src --tables
+python pb.py dw F:\project\src --html -o dw_report.html
+
+# Step 5：全文搜索定位关键逻辑
+python pb.py search "关键词" F:\project\src --mode sql
+
+# Step 6：重构（先 dry-run 预览，满意后 --apply）
+python pb.py refactor F:\project\src -v
+python pb.py refactor F:\project\src --apply -v
+
+# Step 7：编译验证（需要 ORCA DLL）
+python pb.py build app.pbl myapp --mode exe+pbd
 ```
 
 ## 代码分析规则

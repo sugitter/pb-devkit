@@ -10,7 +10,7 @@ Commands:
   pb init <dir>                         Initialize project structure
   pb export <pbl_or_dir> [output_dir]   Export PBL source to .sr* files
   pb import <pbl> <source_dir>          Import .sr* files into PBL
-  pb build <pbl> <app_name>             Rebuild application
+  pb build <pbl> <app_name>             Rebuild application (3 modes: exe / exe+pbd / exe+dll)
   pb compile <pbl> <source_dir>         Import + Rebuild in one step
   pb list <pbl_or_dir>                  List objects in PBL
   pb analyze <dir>                      Analyze code quality
@@ -22,6 +22,9 @@ Commands:
   pb stats <dir>                        Project statistics dashboard
   pb workflow <pbl> [dir]               Full workflow: export->analyze->refactor
   pb snapshot <pbl_or_dir> [output_dir]  Export + diff + git commit for version tracking
+  pb autoexport <dir>                   Smart auto-detect + full export to src/
+  pb review <dir>                       Comprehensive project review report (structure/quality/DW)
+  pb dw <dir>                           DataWindow analyzer: SQL, tables, schema
 """
 import argparse
 import logging
@@ -69,7 +72,7 @@ def _build_parser() -> argparse.ArgumentParser:
         run_analyze, run_analyze_project, run_search,
         run_report, run_refactor, run_diff, run_workflow,
         run_stats, run_snapshot, run_decompile,
-        run_autoexport,
+        run_autoexport, run_review, run_dw,
     )
 
     # Import command modules to trigger register() calls
@@ -78,7 +81,7 @@ def _build_parser() -> argparse.ArgumentParser:
         doctor, init, list as list_mod, export, import_,
         build, compile as compile_mod, analyze, analyze_project,
         search, report, refactor, diff, workflow, stats, snapshot,
-        decompile, autoexport,
+        decompile, autoexport, review, dw,
     )
 
     doctor.register(sub)
@@ -99,6 +102,8 @@ def _build_parser() -> argparse.ArgumentParser:
     snapshot.register(sub)
     decompile.register(sub)
     autoexport.register(sub)
+    review.register(sub)
+    dw.register(sub)
 
     return parser
 
@@ -123,6 +128,8 @@ _COMMAND_MAP = {
     "snapshot": "run_snapshot",
     "decompile": "run_decompile",
     "autoexport": "run_autoexport",
+    "review": "run_review",
+    "dw": "run_dw",
 }
 
 

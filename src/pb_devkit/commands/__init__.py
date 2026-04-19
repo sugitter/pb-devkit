@@ -17,6 +17,8 @@ from pb_devkit.commands.stats import run as run_stats
 from pb_devkit.commands.snapshot import run as run_snapshot
 from pb_devkit.commands.decompile import run as run_decompile
 from pb_devkit.commands.autoexport import run as run_autoexport
+from pb_devkit.commands.review import run as run_review
+from pb_devkit.commands.dw import run as run_dw
 
 __all__ = [
     "run_doctor", "run_init", "run_list", "run_export",
@@ -24,5 +26,5 @@ __all__ = [
     "run_analyze", "run_analyze_project", "run_search",
     "run_report", "run_refactor", "run_diff", "run_workflow",
     "run_stats", "run_snapshot", "run_decompile",
-    "run_autoexport",
+    "run_autoexport", "run_review", "run_dw",
 ]

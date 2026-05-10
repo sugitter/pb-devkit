@@ -1,110 +1,117 @@
-# PB DevKit 功能对比矩阵
+# PB DevKit 功能对比矩阵 / Function Matrix
 
 > 对比 1.x (Python CLI) 与 2.x (Rust CLI + Tauri Desktop) 的功能覆盖情况
-> 
-> 生成时间: 2026-05-10
+> Compare 1.x (Python CLI) vs 2.x (Rust CLI + Tauri Desktop) feature coverage
+>
+> 更新时间 / Updated: 2026-05-11
 
-## 命令功能对比
+## 命令功能对比 / Command Comparison
 
-| 命令 | 1.x Python CLI | 2.x Rust CLI | 2.x Desktop (Tauri) | 状态 | 备注 |
-|-------|---------------|--------------|---------------------|------|------|
-| **PBL 解析** |
-| parse / list | ✅ `list.py` | ✅ `list` | ✅ `list_entries` | ✅ 完成 | |
-| info | ✅ `list.py --info` | ✅ `info` | ✅ `get_pbl_info` | ✅ 完成 | |
-| export | ✅ `export.py` | ✅ `export` | ✅ `export_entry` | ✅ 完成 | |
-| export_pbl (批量) | ✅ `export.py` | ❌ | ✅ `export_pbl` | ⚠️ CLI 缺失 | |
-| **PE 解析** |
-| file_type | ✅ `analyze.py` | ❌ | ✅ `detect_file_type` | ⚠️ CLI 缺失 | |
-| analyze_pe | ✅ `analyze.py` | ❌ | ✅ `analyze_pe` | ⚠️ CLI 缺失 | |
-| extract_pbd | ✅ `analyze.py` | ❌ | ✅ `extract_pbd_from_exe` | ⚠️ CLI 缺失 | |
-| **项目管理** |
-| doctor | ✅ `doctor.py` | ❌ | ✅ `run_doctor` | ⚠️ CLI 缺失 | |
-| init / detect | ✅ `init.py` | ✅ `project` | ✅ `detect_project` | ✅ 完成 | |
-| find_pbl | ✅ `analyze_project.py` | ❌ | ✅ `find_pbl_files` | ⚠️ CLI 缺失 | |
-| **搜索** |
-| search | ✅ `search.py` | ✅ `search` | ✅ `search_in_files` | ✅ 完成 | |
-| search_by_type | ✅ `search.py --type` | ❌ | ✅ `search_by_type` | ⚠️ CLI 缺失 | |
+| 命令 / Command | 1.x Python CLI | 2.x Rust CLI | 2.x Desktop (Tauri) | 状态 / Status | 备注 / Notes |
+|----------------|---------------|--------------|---------------------|--------------|-------------|
+| **PBL 解析 / PBL Parse** |
+| parse / list | ✅ `list.py` | ✅ `parse` / `list` | ✅ `parse_pbl` / `list_entries` | ✅ Done | |
+| info | ✅ `list.py --info` | ✅ `info` | ✅ `get_pbl_info` | ✅ Done | |
+| export | ✅ `export.py` | ✅ `export` | ✅ `export_entry` | ✅ Done | |
+| export_pbl (batch) | ✅ `export.py` | ✅ `export-pbl` | ✅ `export_pbl` | ✅ Done | |
+| **PE 解析 / PE Analysis** |
+| file_type | ✅ `analyze.py` | ✅ `file-type` | ✅ `detect_file_type` | ✅ Done | |
+| analyze_pe | ✅ `analyze.py` | ✅ `analyze-pe` | ✅ `analyze_pe` | ✅ Done | |
+| extract_pbd | ✅ `analyze.py` | ✅ `extract-pbd` | ✅ `extract_pbd_from_exe` | ✅ Done | |
+| **项目管理 / Project Management** |
+| doctor | ✅ `doctor.py` | ✅ `doctor` | ✅ `run_doctor` | ✅ Done | |
+| init / detect | ✅ `init.py` | ✅ `project` | ✅ `detect_project` | ✅ Done | |
+| find_pbl | ✅ `analyze_project.py` | ✅ `find-pbl` | ✅ `find_pbl_files` | ✅ Done | |
+| **搜索 / Search** |
+| search | ✅ `search.py` | ✅ `search` | ✅ `search_in_files` | ✅ Done | |
+| search_by_type | ✅ `search.py --type` | ✅ `search-type` | ✅ `search_by_type` | ✅ Done | |
 | **DataWindow** |
-| dw analyze | ✅ `dw.py` | ❌ | ✅ `analyze_datawindows` | ⚠️ CLI 缺失 | |
-| dw sql | ✅ `dw.py --sql` | ❌ | ✅ `get_dw_sql` | ⚠️ CLI 缺失 | |
-| **反编译** |
-| decompile | ✅ `decompile.py` | ❌ | ✅ `decompile_entry` | ⚠️ CLI 缺失 | |
-| decompile_all | ✅ `decompile.py --all` | ❌ | ✅ `decompile_all` | ⚠️ CLI 缺失 | |
-| list_decompile | ✅ `decompile.py --list` | ❌ | ✅ `list_decompile_entries` | ⚠️ CLI 缺失 | |
-| **报告** |
-| report | ✅ `report.py` | ✅ `report` | ✅ `generate_report` | ✅ 完成 | |
-| export_report | ✅ `report.py --export` | ❌ | ✅ `export_report` | ⚠️ CLI 缺失 | |
-| stats | ✅ `stats.py` | ❌ | ✅ (含在 report) | ⚠️ CLI 缺失 | |
-| **ORCA 引擎** |
-| import | ✅ `import_.py` | ❌ | ❌ | ⏳ 需要 DLL | |
-| build | ✅ `build.py` | ❌ | ❌ | ⏳ 需要 DLL | |
-| compile | ✅ `compile.py` | ❌ | ❌ | ⏳ 需要 DLL | |
-| **高级功能** |
-| refactor | ✅ `refactor.py` | ❌ | ❌ | ⏳ 待实现 | |
-| review | ✅ `review.py` | ❌ | ❌ | ⏳ 待实现 | |
-| snapshot | ✅ `snapshot.py` | ❌ | ❌ | ⏳ 待实现 | |
-| workflow | ✅ `workflow.py` | ❌ | ❌ | ⏳ 待实现 | |
-| diff | ✅ `diff.py` | ❌ | ❌ | ⏳ 待实现 | |
+| dw analyze | ✅ `dw.py` | ✅ `analyze-dw` | ✅ `analyze_datawindows` | ✅ Done | |
+| dw sql | ✅ `dw.py --sql` | ✅ `dw-sql` | ✅ `get_dw_sql` | ✅ Done | |
+| **反编译 / Decompile** |
+| decompile | ✅ `decompile.py` | ✅ `decompile` | ✅ `decompile_entry` | ✅ Done | |
+| decompile_all | ✅ `decompile.py --all` | ✅ `decompile-all` | ✅ `decompile_all` | ✅ Done | |
+| list_decompile | ✅ `decompile.py --list` | ✅ `list-decompile` | ✅ `list_decompile_entries` | ✅ Done | |
+| **报告 / Report** |
+| report | ✅ `report.py` | ✅ `report` | ✅ `generate_report` | ✅ Done | |
+| export_report | ✅ `report.py --export` | ✅ `export-report` | ✅ `export_report` | ✅ Done | |
+| stats | ✅ `stats.py` | ✅ (in `report`) | ✅ (in `report`) | ✅ Done | |
+| **ORCA 引擎 / ORCA Engine** |
+| import | ✅ `import_.py` | ⏳ | ⏳ | ⏳ Pending | 需要 PBSpyORCA.dll / Requires PBSpyORCA.dll |
+| build | ✅ `build.py` | ⏳ | ⏳ | ⏳ Pending | 需要 PBSpyORCA.dll / Requires PBSpyORCA.dll |
+| compile | ✅ `compile.py` | ⏳ | ⏳ | ⏳ Pending | 需要 PBSpyORCA.dll / Requires PBSpyORCA.dll |
+| **高级功能 / Advanced** |
+| refactor | ✅ `refactor.py` | ⏳ | ⏳ | ⏳ Pending | 复杂，使用频率低 / Complex, low usage |
+| review | ✅ `review.py` | ⏳ | ⏳ | ⏳ Pending | 复杂，使用频率低 / Complex, low usage |
+| snapshot | ✅ `snapshot.py` | ⏳ | ⏳ | ⏳ Pending | 有用但非核心 / Useful but non-core |
+| workflow | ✅ `workflow.py` | ⏳ | ⏳ | ⏳ Pending | 高级自动化 / Advanced automation |
+| diff | ✅ `diff.py` | ⏳ | ⏳ | ⏳ Pending | 代码对比 / Code diff |
 
-## 前端功能对比
+## 前端功能对比 / Frontend Comparison
 
-| 功能 | 1.x (无前端) | 2.x Desktop (Angular) | 状态 |
-|------|--------------|----------------------|------|
-| 项目选择器 | ❌ | ✅ `project-selector` | ✅ 完成 |
-| PBL 列表视图 | ❌ | ✅ `pbl-list` | ✅ 完成 |
-| 源码编辑器 | ❌ | ✅ `source-viewer` | ✅ 完成 |
-| DataWindow 可视化 | ❌ | ✅ `dw-analyzer` | ✅ 完成 |
-| 搜索面板 | ❌ | ✅ `search-panel` | ✅ 完成 |
-| 反编译面板 | ❌ | ✅ `decompile-panel` | ✅ 完成 |
-| 报告查看器 | ❌ | ✅ (主界面集成) | ✅ 完成 |
-| PE 信息视图 | ❌ | ⚠️ (接口已定义，UI 待实现) | ⏳ 待实现 |
-| 项目管理界面 | ❌ | ⚠️ (基础功能) | ⏳ 待完善 |
+| 功能 / Feature | 1.x (无前端) | 2.x Desktop (Angular) | 状态 / Status |
+|----------------|--------------|----------------------|--------------|
+| 项目选择器 / Project selector | ❌ | ✅ `project-selector` | ✅ Done |
+| PBL 列表视图 / PBL list view | ❌ | ✅ `pbl-list` | ✅ Done |
+| 源码编辑器 / Source viewer | ❌ | ✅ `source-viewer` | ✅ Done |
+| DataWindow 可视化 / DW analyzer | ❌ | ✅ `dw-analyzer` | ✅ Done |
+| 搜索面板 / Search panel | ❌ | ✅ `search-panel` | ✅ Done |
+| 反编译面板 / Decompile panel | ❌ | ✅ `decompile-panel` | ✅ Done |
+| 环境诊断面板 / Doctor panel | ❌ | ✅ `doctor-panel` | ✅ Done |
+| 报告查看器 / Report viewer | ❌ | ✅ (主界面集成 / integrated) | ✅ Done |
+| PE 信息视图 / PE info view | ❌ | ⏳ (接口已定义 / API defined) | ⏳ Pending |
+| 项目管理界面 / Project management UI | ❌ | ⏳ (基础功能 / basic) | ⏳ Pending |
 
-## 覆盖率统计
+## 覆盖率统计 / Coverage Statistics
 
-| 类别 | 1.x 功能数 | 2.x CLI 覆盖 | 2.x Desktop 覆盖 | CLI 覆盖率 | Desktop 覆盖率 |
-|------|------------|--------------|------------------|-----------|----------------|
-| 核心 PBL 操作 | 4 | 3/4 (75%) | 4/4 (100%) | ⚠️ | ✅ |
-| PE 解析 | 3 | 0/3 (0%) | 3/3 (100%) | ❌ | ✅ |
-| 项目管理 | 3 | 1/3 (33%) | 3/3 (100%) | ❌ | ✅ |
-| 搜索 | 2 | 1/2 (50%) | 2/2 (100%) | ⚠️ | ✅ |
-| DataWindow | 2 | 0/2 (0%) | 2/2 (100%) | ❌ | ✅ |
-| 反编译 | 3 | 0/3 (0%) | 3/3 (100%) | ❌ | ✅ |
-| 报告 | 2 | 1/2 (50%) | 2/2 (100%) | ⚠️ | ✅ |
-| ORCA 功能 | 3 | 0/3 (0%) | 0/3 (0%) | ⏳ | ⏳ |
-| 高级功能 | 5 | 0/5 (0%) | 0/5 (0%) | ⏳ | ⏳ |
-| **总计** | **27** | **6/27 (22%)** | **19/27 (70%)** | ❌ | ✅ |
+| 类别 / Category | 1.x 功能数 / 1.x Count | 2.x CLI 覆盖 | 2.x Desktop 覆盖 | CLI 覆盖率 / CLI % | Desktop 覆盖率 / Desktop % |
+|-----------------|--------------------------|--------------|------------------|-------------------|------------------------|
+| 核心 PBL 操作 / Core PBL | 4 | 4/4 (100%) | 4/4 (100%) | ✅ | ✅ |
+| PE 解析 / PE Analysis | 3 | 3/3 (100%) | 3/3 (100%) | ✅ | ✅ |
+| 项目管理 / Project Mgmt | 3 | 3/3 (100%) | 3/3 (100%) | ✅ | ✅ |
+| 搜索 / Search | 2 | 2/2 (100%) | 2/2 (100%) | ✅ | ✅ |
+| DataWindow | 2 | 2/2 (100%) | 2/2 (100%) | ✅ | ✅ |
+| 反编译 / Decompile | 3 | 3/3 (100%) | 3/3 (100%) | ✅ | ✅ |
+| 报告 / Report | 3 | 3/3 (100%) | 3/3 (100%) | ✅ | ✅ |
+| ORCA 功能 / ORCA | 3 | 0/3 (0%) | 0/3 (0%) | ⏳ | ⏳ |
+| 高级功能 / Advanced | 5 | 0/5 (0%) | 0/5 (0%) | ⏳ | ⏳ |
+| **总计 / Total** | **28** | **20/28 (71%)** | **20/28 (71%)** | ⏳ | ⏳ |
 
-## 优先级建议
+> 注：ORCA 和高级功能依赖外部 DLL 或复杂度较高，列为 v2.1+ 规划。
+> Note: ORCA and advanced features depend on external DLLs or high complexity; planned for v2.1+.
 
-### 🔴 高优先级（CLI 功能缺失，影响命令行用户）
+## 优先级建议 / Priority Recommendations
 
-| 功能 | 原因 |
-|------|------|
-| PE 解析命令 | CLI 用户无法分析 EXE 文件 |
-| 反编译命令 | CLI 是主要反编译使用场景 |
-| DW 分析命令 | 数据分析是常见需求 |
+### 🔴 高优先级（v2.1）— High Priority (v2.1)
 
-### 🟡 中优先级（Desktop 功能完善）
+| 功能 / Feature | 原因 / Reason |
+|---------------|----------------|
+| ORCA 功能 / ORCA features | 需要 DLL，完成后可替代 PB IDE 编译/构建 / Requires DLL, enables PB IDE replacement |
+| PE 信息视图 UI / PE info view UI | 后端已完成，前端界面缺失 / Backend done, frontend UI missing |
 
-| 功能 | 原因 |
-|------|------|
-| PE 信息视图 UI | 后端已完成，前端界面缺失 |
-| 项目管理界面 | 当前只有基础功能 |
-| diff 功能 | 代码对比是常见需求 |
+### 🟡 中优先级（v2.2）— Medium Priority (v2.2)
 
-### 🟢 低优先级（高级功能）
+| 功能 / Feature | 原因 / Reason |
+|---------------|----------------|
+| 项目管理界面完善 / Project management UI | 当前只有基础功能 / Currently basic only |
+| diff 功能 / Diff | 代码对比是常见需求 / Common need for code comparison |
 
-| 功能 | 原因 |
-|------|------|
-| refactor | 复杂，使用频率低 |
-| review | 复杂，使用频率低 |
-| snapshot | 有用但非核心 |
-| workflow | 高级自动化，使用频率低 |
+### 🟢 低优先级（v2.3+）— Low Priority (v2.3+)
 
-## 结论
+| 功能 / Feature | 原因 / Reason |
+|---------------|----------------|
+| refactor | 复杂，使用频率低 / Complex, low usage |
+| review | 复杂，使用频率低 / Complex, low usage |
+| snapshot | 有用但非核心 / Useful but non-core |
+| workflow | 高级自动化，使用频率低 / Advanced automation, low usage |
 
-1. **Desktop (Tauri + Angular) 功能基本完备**（70% 覆盖），核心功能已可用
-2. **CLI 功能严重缺失**（仅 22% 覆盖），需要补强
-3. **ORCA 功能**需要 PBSpyORCA.dll 才能实施
-4. **建议下一步**：优先补充 CLI 的核心命令（PE、反编译、DW）
+## 结论 / Conclusion
+
+1. **Desktop (Tauri + Angular) 功能基本完备**（20/28，71% 覆盖），核心功能已可用
+   **Desktop (Tauri + Angular) is largely complete** (20/28, 71% coverage), core features ready
+2. **CLI 功能已全部实现**（20/20 核心命令 ✅），覆盖所有核心场景
+   **CLI is fully implemented** (20/20 core commands ✅), covering all core scenarios
+3. **ORCA 功能**需要 PBSpyORCA.dll 才能实施，列为下阶段目标
+   **ORCA features** require PBSpyORCA.dll, planned for next phase
+4. **建议下一步**：完善 Desktop 前端剩余 UI（PE 视图、项目管理），规划 ORCA 集成
+   **Next steps**: Complete remaining Desktop UI (PE view, project management), plan ORCA integration

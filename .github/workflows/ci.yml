@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─── pb-devkit-core ───
+  test-core:
+    name: Test pb-devkit-core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run tests
+        working-directory: pb-devkit-2.x/pb-devkit-core
+        run: cargo test --all-features
+
+  # ─── pb-devkit-cli ───
+  build-cli:
+    name: Build pb-devkit-cli
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build CLI
+        working-directory: pb-devkit-2.x/pb-devkit-cli
+        run: cargo build --release
+
+  # ─── pb-devkit-desktop (Angular build only) ───
+  build-desktop-frontend:
+    name: Build Desktop Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: pb-devkit-2.x/pb-devkit-desktop/package-lock.json
+      - name: Install dependencies
+        working-directory: pb-devkit-2.x/pb-devkit-desktop
+        run: npm ci
+      - name: Build Angular
+        working-directory: pb-devkit-2.x/pb-devkit-desktop
+        run: npx ng build

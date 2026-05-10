@@ -1,4 +1,4 @@
-# Python
+# ─── Python (1.x) ───
 __pycache__/
 *.py[cod]
 *$py.class
@@ -13,41 +13,73 @@ build/
 venv/
 env/
 
-# IDE
+# ─── Rust (2.x) ───
+target/
+**/target/
+**/Cargo.lock
+# Only keep Cargo.lock for binaries/wasm, not libraries:
+# pb-devkit-core is a library → Cargo.lock ignored
+# pb-devkit-cli / pb-devkit-desktop are binaries → Cargo.lock committed
+pb-devkit-2.x/pb-devkit-cli/Cargo.lock
+pb-devkit-2.x/pb-devkit-desktop/src-tauri/Cargo.lock
+
+# ─── Node / Angular (2.x) ───
+node_modules/
+**/node_modules/
+package-lock.json
+pnpm-lock.yaml
+.esbuild/
+.angular/
+
+# ─── Tauri (2.x) ───
+# Build artifacts
+*.msi
+*.exe
+!*.spec.ts
+pb-devkit-2.x/pb-devkit-desktop/src-tauri/target/
+pb-devkit-2.x/pb-devkit-desktop/src-tauri/bundle/
+pb-devkit-2.x/pb-devkit-desktop/dist/
+
+# ─── IDE ───
 .idea/
 .vscode/
 *.swp
 *.swo
+*.iml
 
-# ORCA DLL (large binary, not in repo)
+# ─── ORCA DLL (large binary, not in repo) ───
 orca/*.dll
 orca/*.so
 orca/*.dylib
+**/PBSpyORCA.dll
 
-# PB exported sources (working files)
+# ─── PB working files ───
 exported/
 pb-workflow/
-
-# Snapshot metadata
 .pb-snapshots/
 
-# Resources (binary test data, not for repo)
-src/pb_devkit/resoures/
+# ─── Resources (binary test data) ───
+src/pb_devkit/resources/
+**/*.pbl
+**/*.pbd
+**/*.pbw
+**/*.pbt
+**/*.srw
+**/*.srd
 
-# Build artifacts
-*.vsix
-node_modules/
-
-# IDEA build
+# ─── IDEA plugin build (1.x) ───
 idea-plugin/build/
 
-# Temporary scripts (project-specific test/debug scripts at root)
+# ─── Temporary / debug scripts ───
 /debug_*.py
 /export_*.py
 /extract_*.py
 /test_*.py
 /build_*.py
 
-# OS
+# ─── OS ───
 Thumbs.db
 .DS_Store
+
+# ─── WorkBuddy ───
+.workbuddy/

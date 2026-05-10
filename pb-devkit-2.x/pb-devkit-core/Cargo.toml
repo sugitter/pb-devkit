@@ -1,0 +1,10 @@
+[package]
+name = "pb-devkit-core"
+version = "2.0.0"
+edition = "2021"
+description = "PB DevKit Core Library - PowerBuilder Legacy System Toolkit"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"

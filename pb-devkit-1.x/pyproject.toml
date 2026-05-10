@@ -4,7 +4,7 @@ build-backend = "setuptools.backends._legacy:_Backend"
 
 [project]
 name = "pb-devkit"
-version = "1.2.0"
+version = "1.5.0"
 description = "PowerBuilder Legacy System Toolkit - CLI analysis, refactoring, and maintenance without the PB IDE"
 readme = "README.md"
 license = {text = "MIT"}

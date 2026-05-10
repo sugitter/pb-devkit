@@ -26,7 +26,6 @@ pb-devkit-2.x/pb-devkit-desktop/src-tauri/Cargo.lock
 # ─── Node / Angular (2.x) ───
 node_modules/
 **/node_modules/
-package-lock.json
 pnpm-lock.yaml
 .esbuild/
 .angular/

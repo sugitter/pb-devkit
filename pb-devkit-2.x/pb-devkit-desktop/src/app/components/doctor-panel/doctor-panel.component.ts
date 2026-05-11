@@ -103,14 +103,14 @@ import { PblService, DoctorResult } from '../../services/pbl.service';
       display: flex;
       flex-direction: column;
       height: 100%;
-      padding: 0.75rem;
       overflow-y: auto;
     }
     .panel-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #e5e7eb;
     }
     .panel-header h3 {
       margin: 0;
@@ -133,11 +133,11 @@ import { PblService, DoctorResult } from '../../services/pbl.service';
       align-items: center;
       gap: 0.5rem;
       padding: 0.6rem 0.75rem;
+      margin: 0.75rem 1rem;
       background: #fee2e2;
       border-radius: 6px;
       color: #dc2626;
       font-size: 0.8rem;
-      margin-bottom: 0.75rem;
     }
     .btn-dismiss {
       margin-left: auto;
@@ -152,6 +152,7 @@ import { PblService, DoctorResult } from '../../services/pbl.service';
       border: 1px solid #e5e7eb;
       border-radius: 6px;
       padding: 0.75rem;
+      margin: 0.75rem 1rem;
     }
     .result-header {
       display: flex;

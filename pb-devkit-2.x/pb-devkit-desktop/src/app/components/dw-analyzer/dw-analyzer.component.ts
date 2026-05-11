@@ -152,13 +152,13 @@ import { PblService, DwInfo, DwAnalysisResult } from '../../services/pbl.service
     .column-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.25rem; }
     .col-tag { padding: 0.15rem 0.4rem; background: #dbeafe; color: #1d4ed8; border-radius: 4px; font-size: 0.7rem; font-family: monospace; }
     .sql-header { display: flex; align-items: center; justify-content: space-between; }
-    .btn-copy { padding: 0.2rem 0.5rem; background: #313244; color: #cdd6f4; border: none; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
-    .btn-copy:hover { background: #45475a; }
+    .btn-copy { padding: 0.2rem 0.5rem; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
+    .btn-copy:hover { background: #e5e7eb; }
     .btn-fetch-sql { padding: 0.3rem 0.75rem; background: #7c3aed; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
     .btn-fetch-sql:hover { background: #6d28d9; }
-    .sql-section { background: #1e1e2e; margin: 0; padding: 1rem; }
-    .sql-section h4 { color: #89b4fa; }
-    .sql-code { margin: 0; font-size: 0.8rem; color: #cdd6f4; font-family: monospace; white-space: pre-wrap; word-break: break-all; }
+    .sql-section { background: #f9fafb; margin: 0; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 4px; }
+    .sql-section h4 { color: #374151; }
+    .sql-code { margin: 0; font-size: 0.8rem; color: #1f2937; font-family: 'Consolas', monospace; white-space: pre-wrap; word-break: break-all; background: #fafbfc; padding: 0.75rem; border-radius: 4px; border: 1px solid #e5e7eb; }
     .empty-hint { padding: 3rem 1rem; text-align: center; color: #9ca3af; }
     .empty-hint p { margin: 0; font-size: 0.85rem; }
   `]

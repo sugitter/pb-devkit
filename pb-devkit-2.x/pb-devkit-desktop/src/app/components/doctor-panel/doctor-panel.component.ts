@@ -9,7 +9,7 @@ import { PblService, DoctorResult } from '../../services/pbl.service';
   template: `
     <div class="doctor-panel">
       <div class="panel-header">
-        <h3>⚕️ 环境诊断</h3>
+        <h3>🔧 环境诊断</h3>
         <button class="btn-run" (click)="runDoctor()" [disabled]="loading">
           {{ loading ? '检测中...' : '运行诊断' }}
         </button>
@@ -90,137 +90,124 @@ import { PblService, DoctorResult } from '../../services/pbl.service';
           }
         </div>
       }
+
+      @if (!result && !loading && !error) {
+        <div class="empty-hint">
+          <p>点击「运行诊断」检查环境状态</p>
+        </div>
+      }
     </div>
   `,
   styles: [`
     .doctor-panel {
-      padding: 16px;
-      border-bottom: 1px solid #334155;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 0.75rem;
+      overflow-y: auto;
     }
     .panel-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 0.75rem;
     }
     .panel-header h3 {
       margin: 0;
-      font-size: 15px;
-      color: #e2e8f0;
+      font-size: 0.9rem;
+      color: #374151;
     }
     .btn-run {
-      padding: 6px 14px;
+      padding: 0.35rem 0.75rem;
       background: #3b82f6;
       color: #fff;
       border: none;
-      border-radius: 6px;
+      border-radius: 4px;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 0.8rem;
     }
-    .btn-run:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .btn-run:hover:not(:disabled) {
-      background: #2563eb;
-    }
+    .btn-run:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-run:hover:not(:disabled) { background: #2563eb; }
     .error-state {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      background: #451a1a;
-      border: 1px solid #ef4444;
+      gap: 0.5rem;
+      padding: 0.6rem 0.75rem;
+      background: #fee2e2;
       border-radius: 6px;
-      color: #fca5a5;
-      font-size: 13px;
-      margin-bottom: 12px;
+      color: #dc2626;
+      font-size: 0.8rem;
+      margin-bottom: 0.75rem;
     }
     .btn-dismiss {
       margin-left: auto;
       background: none;
       border: none;
-      color: #fca5a5;
+      color: #dc2626;
       cursor: pointer;
-      font-size: 16px;
+      font-size: 0.9rem;
     }
     .doctor-result {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 14px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 0.75rem;
     }
     .result-header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 14px;
+      gap: 0.4rem;
+      font-size: 0.85rem;
       font-weight: 600;
-      color: #e2e8f0;
-      margin-bottom: 12px;
+      color: #111;
+      margin-bottom: 0.75rem;
     }
     .check-list {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      margin-bottom: 12px;
+      gap: 0.4rem;
+      margin-bottom: 0.75rem;
     }
     .check-item {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 13px;
+      gap: 0.4rem;
+      padding: 0.5rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
     }
     .check-item.ok {
-      background: #052e16;
-      color: #4ade80;
+      background: #dcfce7;
+      color: #166534;
     }
     .check-item.fail {
-      background: #451a1a;
-      color: #fca5a5;
+      background: #fee2e2;
+      color: #991b1b;
     }
-    .check-icon {
-      font-size: 16px;
-      width: 24px;
-      text-align: center;
-    }
-    .check-label {
-      font-weight: 600;
-      min-width: 120px;
-    }
-    .check-detail {
-      color: #94a3b8;
-      font-size: 12px;
-    }
-    .issue-section, .warning-section {
-      margin-top: 8px;
-    }
-    .issue-section h4, .warning-section h4 {
-      margin: 0 0 6px;
-      font-size: 13px;
-    }
-    .issue-section h4 { color: #fca5a5; }
-    .warning-section h4 { color: #fcd34d; }
-    .issue-item {
-      color: #fca5a5;
-      font-size: 13px;
-      margin-bottom: 4px;
-    }
-    .warning-item {
-      color: #fcd34d;
-      font-size: 13px;
-      margin-bottom: 4px;
-    }
+    .check-icon { width: 20px; text-align: center; }
+    .check-label { font-weight: 600; min-width: 100px; }
+    .check-detail { color: #6b7280; font-size: 0.75rem; }
+    .issue-section, .warning-section { margin-top: 0.5rem; }
+    .issue-section h4 { margin: 0 0 0.3rem; font-size: 0.8rem; color: #dc2626; }
+    .warning-section h4 { margin: 0 0 0.3rem; font-size: 0.8rem; color: #d97706; }
+    .issue-section ul, .warning-section ul { padding-left: 1.2rem; margin: 0; }
+    .issue-item { color: #991b1b; font-size: 0.8rem; margin-bottom: 0.2rem; }
+    .warning-item { color: #92400e; font-size: 0.8rem; margin-bottom: 0.2rem; }
     .all-ok {
-      padding: 10px;
-      background: #052e16;
-      border-radius: 6px;
-      color: #4ade80;
-      font-size: 13px;
+      padding: 0.6rem;
+      background: #dcfce7;
+      border-radius: 4px;
+      color: #166534;
+      font-size: 0.8rem;
       text-align: center;
     }
+    .empty-hint {
+      padding: 2rem 1rem;
+      text-align: center;
+      color: #9ca3af;
+      font-size: 0.85rem;
+    }
+    .empty-hint p { margin: 0; }
   `]
 })
 export class DoctorPanelComponent implements OnInit {
@@ -231,7 +218,6 @@ export class DoctorPanelComponent implements OnInit {
   constructor(private pblService: PblService) {}
 
   ngOnInit() {
-    // 组件加载时自动运行一次诊断
     this.runDoctor();
   }
 

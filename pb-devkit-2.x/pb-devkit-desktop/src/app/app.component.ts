@@ -136,7 +136,7 @@ type ContentMode = 'welcome' | 'source';
             <p>PowerBuilder Legacy System Toolkit</p>
             <ul>
               <li>🦀 Rust 核心引擎（零依赖 PBL/PBD/PE 解析）</li>
-              <li>🅰 Angular 20 前端（standalone + 控制流语法）</li>
+              <li>🅰 Angular 前端（standalone + 控制流语法）</li>
               <li>🖥 Tauri 2.x 桌面框架</li>
               <li>📦 PBL/PBD/EXE 全格式支持</li>
               <li>🔍 全文搜索 + 📊 DataWindow 分析</li>
@@ -158,22 +158,22 @@ type ContentMode = 'welcome' | 'source';
     .nav-btn:hover { background: #313244; }
     .nav-btn.active { background: #313244; box-shadow: 2px 0 0 0 #cba6f7 inset; }
     .sidebar-spacer { flex: 1; }
-    .panel-left { width: 280px; background: #fff; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+    .panel-left { width: 320px; min-width: 280px; background: #fff; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
     .panel-actions { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; }
     .btn-back { padding: 0.25rem 0.5rem; background: transparent; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer; font-size: 0.8rem; color: #374151; }
     .btn-back:hover { background: #f9fafb; }
     .project-name { font-size: 0.8rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-    .content-area { flex: 1; overflow: hidden; }
-    .welcome-screen { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #6b7280; }
+    .content-area { flex: 1; overflow: hidden; min-width: 0; }
+    .welcome-screen { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #6b7280; padding: 2rem; }
     .welcome-icon { font-size: 4rem; margin-bottom: 1rem; }
     .welcome-screen h2 { margin: 0 0 0.5rem; color: #111; font-size: 1.5rem; }
     .welcome-screen > p { margin: 0 0 2rem; font-size: 0.9rem; }
-    .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 500px; }
-    .feature-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.25rem; text-align: center; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
+    .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; max-width: 480px; width: 100%; }
+    .feature-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; text-align: center; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
     .feature-card:hover { border-color: #93c5fd; box-shadow: 0 2px 8px rgba(59,130,246,0.1); }
-    .feat-icon { font-size: 1.75rem; display: block; margin-bottom: 0.5rem; }
-    .feature-card h4 { margin: 0 0 0.25rem; color: #111; font-size: 0.9rem; }
-    .feature-card p { margin: 0; font-size: 0.8rem; color: #9ca3af; }
+    .feat-icon { font-size: 1.5rem; display: block; margin-bottom: 0.4rem; }
+    .feature-card h4 { margin: 0 0 0.2rem; color: #111; font-size: 0.85rem; }
+    .feature-card p { margin: 0; font-size: 0.75rem; color: #9ca3af; }
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
     .about-card { background: #fff; border-radius: 12px; padding: 2rem; max-width: 400px; width: 90%; }
     .about-card h2 { margin: 0 0 0.5rem; }

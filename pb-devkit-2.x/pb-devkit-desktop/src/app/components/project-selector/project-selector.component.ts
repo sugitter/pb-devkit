@@ -11,19 +11,19 @@ import { PblService, ProjectInfo, PblFileInfo } from '../../services/pbl.service
   template: `
     <div class="project-selector">
       <div class="header">
-        <h1>⚡ PB DevKit 2.0</h1>
+        <h1><span class="material-icons mi-lg" style="color:#7c3aed;vertical-align:middle">bolt</span> PB DevKit 2.0</h1>
         <p class="subtitle">PowerBuilder Legacy System Toolkit</p>
       </div>
 
       <div class="actions">
         <button class="btn-primary" (click)="selectProject()">
-          📁 选择项目文件夹
+          <span class="material-icons" style="font-size:16px;vertical-align:middle">folder</span> 选择项目文件夹
         </button>
         <button class="btn-secondary" (click)="selectPblFile()">
-          📄 选择 PBL/PBD 文件
+          <span class="material-icons" style="font-size:16px;vertical-align:middle">description</span> 选择 PBL/PBD 文件
         </button>
         <button class="btn-secondary" (click)="selectExeFile()">
-          ⚙️ 选择 EXE/DLL 文件
+          <span class="material-icons" style="font-size:16px;vertical-align:middle">settings</span> 选择 EXE/DLL 文件
         </button>
       </div>
 
@@ -41,11 +41,11 @@ import { PblService, ProjectInfo, PblFileInfo } from '../../services/pbl.service
 
           @if (projectInfo.pbl_files.length > 0) {
             <div class="file-section">
-              <h3>📦 PBL 文件 ({{ projectInfo.pbl_files.length }})</h3>
+              <h3><span class="material-icons" style="font-size:16px;vertical-align:middle">inventory_2</span> PBL 文件 ({{ projectInfo.pbl_files.length }})</h3>
               <ul class="file-list">
                 @for (pbl of projectInfo.pbl_files; track pbl.path) {
                   <li (click)="selectPbl(pbl)">
-                    <span class="file-icon">📦</span>
+                    <span class="file-icon"><span class="material-icons" style="font-size:16px">inventory_2</span></span>
                     <span class="file-name">{{ pbl.name }}</span>
                     <span class="file-size">{{ formatSize(pbl.size) }}</span>
                   </li>
@@ -56,11 +56,11 @@ import { PblService, ProjectInfo, PblFileInfo } from '../../services/pbl.service
 
           @if (projectInfo.exe_files.length > 0) {
             <div class="file-section">
-              <h3>⚙️ EXE/PBD 文件 ({{ projectInfo.exe_files.length }})</h3>
+              <h3><span class="material-icons" style="font-size:16px;vertical-align:middle">settings</span> EXE/PBD 文件 ({{ projectInfo.exe_files.length }})</h3>
               <ul class="file-list">
                 @for (exe of projectInfo.exe_files; track exe) {
                   <li (click)="selectExe(exe)">
-                    <span class="file-icon">⚙️</span>
+                    <span class="file-icon"><span class="material-icons" style="font-size:16px">settings</span></span>
                     <span class="file-name">{{ getFileName(exe) }}</span>
                   </li>
                 }
@@ -70,7 +70,7 @@ import { PblService, ProjectInfo, PblFileInfo } from '../../services/pbl.service
 
           @if (!projectInfo.is_valid) {
             <div class="warning">
-              ⚠️ 未检测到有效的 PowerBuilder 项目文件
+              <span class="material-icons" style="font-size:16px;vertical-align:middle">warning</span> 未检测到有效的 PowerBuilder 项目文件
             </div>
           }
         </div>
@@ -97,6 +97,10 @@ import { PblService, ProjectInfo, PblFileInfo } from '../../services/pbl.service
       font-size: 1.25rem;
       color: #111;
       margin: 0 0 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
     }
     .subtitle {
       color: #6b7280;
@@ -118,6 +122,9 @@ import { PblService, ProjectInfo, PblFileInfo } from '../../services/pbl.service
       transition: background 0.15s;
       width: 100%;
       text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
     }
     .btn-primary {
       background: #2563eb;
@@ -170,6 +177,9 @@ import { PblService, ProjectInfo, PblFileInfo } from '../../services/pbl.service
       font-size: 0.8rem;
       color: #374151;
       margin: 0 0 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
     }
     .file-list {
       list-style: none;
@@ -186,6 +196,7 @@ import { PblService, ProjectInfo, PblFileInfo } from '../../services/pbl.service
       font-size: 0.8rem;
     }
     .file-list li:hover { background: #e5e7eb; }
+    .file-icon { color: #6b7280; }
     .file-size {
       margin-left: auto;
       color: #9ca3af;
@@ -198,6 +209,9 @@ import { PblService, ProjectInfo, PblFileInfo } from '../../services/pbl.service
       border-radius: 6px;
       color: #92400e;
       font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
     }
     .error {
       margin-top: 0.75rem;

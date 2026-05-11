@@ -20,7 +20,9 @@
 - [x] DataWindow 可视化 (dw-analyzer)
 - [x] 搜索结果面板 (search-panel)
 - [x] 反编译面板 (decompile-panel)
-- [x] 报告查看器 (集成在主界面)
+- [x] 环境诊断面板 (doctor-panel)
+- [x] PE 信息视图 (pe-view)
+- [x] 报告查看器 (report-view)
 
 ### 构建问题
 - [x] 修复 Angular 编译错误 (@if/@for 转义问题)
@@ -62,5 +64,5 @@
 - [ ] 添加批量导出进度显示
 
 ### 文档
-- [ ] 完善 README.md
+- [x] 完善 README.md (中英双语)
 - [ ] 添加命令行使用示例

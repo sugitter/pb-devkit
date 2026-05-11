@@ -16,7 +16,7 @@ type FilterType = 'all' | 'source' | 'compiled';
       <!-- 文件信息头 -->
       <div class="panel-header">
         <div class="file-info">
-          <span class="file-icon">{{ fileIcon }}</span>
+          <span class="file-icon"><span class="material-icons">{{ fileIcon }}</span></span>
           <div class="file-details">
             <div class="file-name">{{ fileName }}</div>
             @if (fileTypeResult) {
@@ -31,7 +31,7 @@ type FilterType = 'all' | 'source' | 'compiled';
         <div class="header-actions">
           <button class="btn-sm" (click)="exportAllEntries()" [disabled]="!entries.length || loading"
                   title="导出全部源码">
-            ⬇ 导出全部
+            <span class="material-icons" style="font-size:14px">download</span> 导出全部
           </button>
         </div>
       </div>
@@ -40,8 +40,8 @@ type FilterType = 'all' | 'source' | 'compiled';
       @if (peInfo) {
         <div class="pe-info-section">
           <div class="pe-header" (click)="showPeDetails = !showPeDetails">
-            <span>🖥 PE 分析</span>
-            <span class="pe-toggle">{{ showPeDetails ? '▼' : '▶' }}</span>
+            <span><span class="material-icons" style="font-size:14px;vertical-align:middle">computer</span> PE 分析</span>
+            <span class="pe-toggle"><span class="material-icons">{{ showPeDetails ? 'expand_more' : 'chevron_right' }}</span></span>
           </div>
           @if (showPeDetails) {
             <div class="pe-details">
@@ -85,11 +85,11 @@ type FilterType = 'all' | 'source' | 'compiled';
       @if (!entries.length && !loading && !error) {
         <div class="action-area">
           <button class="btn-primary" (click)="loadEntries()">
-            🔍 分析文件
+            <span class="material-icons" style="font-size:16px;vertical-align:middle">search</span> 分析文件
           </button>
           @if (filePath.toLowerCase().endsWith('.exe') || filePath.toLowerCase().endsWith('.dll')) {
             <button class="btn-secondary" (click)="extractEmbedded()">
-              📦 提取嵌入 PBD
+              <span class="material-icons" style="font-size:16px;vertical-align:middle">inventory_2</span> 提取嵌入 PBD
             </button>
           }
         </div>
@@ -104,9 +104,9 @@ type FilterType = 'all' | 'source' | 'compiled';
 
       @if (error) {
         <div class="error-state">
-          <span class="error-icon">⚠</span>
+          <span class="error-icon"><span class="material-icons" style="font-size:16px">warning</span></span>
           <span>{{ error }}</span>
-          <button class="btn-dismiss" (click)="error = ''">✕</button>
+          <button class="btn-dismiss" (click)="error = ''"><span class="material-icons" style="font-size:16px">close</span></button>
         </div>
       }
 
@@ -117,10 +117,10 @@ type FilterType = 'all' | 'source' | 'compiled';
             全部 {{ entries.length }}
           </span>
           <span class="stat" [class.active]="filter==='source'" (click)="filter='source'">
-            📝 源码 {{ sourceCount }}
+            <span class="material-icons" style="font-size:14px">description</span> 源码 {{ sourceCount }}
           </span>
           <span class="stat" [class.active]="filter==='compiled'" (click)="filter='compiled'">
-            🔧 编译 {{ compiledCount }}
+            <span class="material-icons" style="font-size:14px">build</span> 编译 {{ compiledCount }}
           </span>
         </div>
 
@@ -135,7 +135,7 @@ type FilterType = 'all' | 'source' | 'compiled';
             <div class="entry-item"
                  [class.selected]="selectedEntry?.name === entry.name"
                  (click)="selectEntry(entry)">
-              <span class="type-badge">{{ typeIcon(entry.entry_type) }}</span>
+              <span class="type-badge"><span class="material-icons" style="font-size:16px">{{ typeIcon(entry.entry_type) }}</span></span>
               <div class="entry-info">
                 <span class="entry-name">{{ entry.name }}</span>
                 <span class="entry-meta">
@@ -161,7 +161,7 @@ type FilterType = 'all' | 'source' | 'compiled';
       <!-- 提取成功提示 -->
       @if (extractResult) {
         <div class="extract-result">
-          ✅ 已提取 {{ extractResult.pbd_count }} 个 PBD 到：
+          <span class="material-icons" style="font-size:16px;color:#059669">check_circle</span> 已提取 {{ extractResult.pbd_count }} 个 PBD 到：
           <code>{{ extractResult.output_path }}</code>
         </div>
       }
@@ -286,10 +286,10 @@ export class DecompilePanelComponent implements OnChanges {
 
   get fileIcon(): string {
     const name = this.fileName.toLowerCase();
-    if (name.endsWith('.exe')) return '⚙️';
-    if (name.endsWith('.pbd')) return '🔓';
-    if (name.endsWith('.dll')) return '🔧';
-    return '📁';
+    if (name.endsWith('.exe')) return 'settings';
+    if (name.endsWith('.pbd')) return 'lock_open';
+    if (name.endsWith('.dll')) return 'build';
+    return 'folder';
   }
 
   get sourceCount(): number {
@@ -410,12 +410,12 @@ export class DecompilePanelComponent implements OnChanges {
 
   typeIcon(type: string): string {
     const icons: Record<string, string> = {
-      window: '🪟', datawindow: '📊', menu: '☰', function: 'ƒ',
-      structure: '🔷', userobject: '🧩', application: '🚀',
-      query: '🔍', pipeline: '🔗', project: '📋', proxy: '🔁',
-      binary: '🔢', unknown: '❓'
+      window: 'window', datawindow: 'bar_chart', menu: 'menu', function: 'functions',
+      structure: 'diamond', userobject: 'extension', application: 'rocket_launch',
+      query: 'search', pipeline: 'link', project: 'assignment', proxy: 'sync',
+      binary: 'pin', unknown: 'help'
     };
-    return icons[type.toLowerCase()] ?? '📄';
+    return icons[type.toLowerCase()] ?? 'description';
   }
 
   formatSize(bytes: number): string {

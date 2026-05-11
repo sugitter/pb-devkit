@@ -14,7 +14,7 @@ type FilterType = 'all' | 'source' | 'compiled';
     <div class="pbl-list">
       <div class="pbl-header">
         <div class="pbl-title">
-          <span class="pbl-icon">📦</span>
+          <span class="pbl-icon"><span class="material-icons">inventory_2</span></span>
           <div>
             <h3>{{ fileName }}</h3>
             @if (parseResult) {
@@ -24,10 +24,10 @@ type FilterType = 'all' | 'source' | 'compiled';
         </div>
         <div class="pbl-actions">
           <button class="btn-icon" (click)="exportAll()" title="导出全部" [disabled]="loading">
-            ⬇ 导出
+            <span class="material-icons" style="font-size:14px">download</span> 导出
           </button>
           <button class="btn-icon" (click)="reload()" title="刷新" [disabled]="loading">
-            🔄
+            <span class="material-icons">refresh</span>
           </button>
         </div>
       </div>
@@ -35,10 +35,10 @@ type FilterType = 'all' | 'source' | 'compiled';
       @if (parseResult) {
         <div class="stats-bar">
           <span class="stat source" (click)="filter='source'" [class.active]="filter==='source'">
-            📝 源码 {{ parseResult.source_count }}
+            <span class="material-icons" style="font-size:14px">description</span> 源码 {{ parseResult.source_count }}
           </span>
           <span class="stat compiled" (click)="filter='compiled'" [class.active]="filter==='compiled'">
-            🔧 编译 {{ parseResult.compiled_count }}
+            <span class="material-icons" style="font-size:14px">build</span> 编译 {{ parseResult.compiled_count }}
           </span>
           <span class="stat all" (click)="filter='all'" [class.active]="filter==='all'">
             全部 {{ parseResult.total_count }}
@@ -66,7 +66,7 @@ type FilterType = 'all' | 'source' | 'compiled';
           <div class="entry-item" [class.selected]="selectedEntry?.name === entry.name"
                (click)="selectEntry(entry)">
             <span class="type-badge" [class]="'type-' + entry.entry_type_name">
-              {{ typeIcon(entry.entry_type_name) }}
+              <span class="material-icons" style="font-size:16px">{{ typeIcon(entry.entry_type_name) }}</span>
             </span>
             <div class="entry-info">
               <span class="entry-name">{{ entry.name }}</span>
@@ -194,7 +194,7 @@ export class PblListComponent implements OnChanges {
       const msg = await this.pblService.exportPbl(this.pblPath, selected as string, false);
       this.error = '';
       // 简单 Toast 提示（用 error 字段借用，稍后 2 秒清除）
-      this.error = '✅ ' + msg;
+      this.error = '✓ ' + msg;
       setTimeout(() => { if (this.error.startsWith('✅')) this.error = ''; }, 3000);
     } catch (e: any) {
       this.error = e.message ?? '导出失败';
@@ -205,12 +205,12 @@ export class PblListComponent implements OnChanges {
 
   typeIcon(type: string): string {
     const icons: Record<string, string> = {
-      window: '🪟', datawindow: '📊', menu: '☰', function: 'ƒ',
-      structure: '🔷', userobject: '🧩', application: '🚀',
-      query: '🔍', pipeline: '🔗', project: '📋', proxy: '🔁',
-      binary: '🔢', unknown: '❓'
+      window: 'window', datawindow: 'bar_chart', menu: 'menu', function: 'functions',
+      structure: 'diamond', userobject: 'extension', application: 'rocket_launch',
+      query: 'search', pipeline: 'link', project: 'assignment', proxy: 'sync',
+      binary: 'pin', unknown: 'help'
     };
-    return icons[type.toLowerCase()] ?? '📄';
+    return icons[type.toLowerCase()] ?? 'description';
   }
 
   formatSize(bytes: number): string {

@@ -25,3 +25,43 @@ code, pre, .mono { font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, mon
 
 /* 禁用用户选择（桌面应用） */
 .sidebar, .sidebar * { user-select: none; }
+
+/* Material Icons 字体图标 */
+.material-icons {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 18px;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+  vertical-align: middle;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.material-icons-outlined {
+  font-family: 'Material Icons Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 18px;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+  vertical-align: middle;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.material-icons.mi-lg { font-size: 24px; }
+.material-icons.mi-xl { font-size: 32px; }
+.material-icons.mi-2xl { font-size: 48px; }
+.material-icons-outlined.mi-lg { font-size: 24px; }
+.material-icons-outlined.mi-xl { font-size: 32px; }
+.material-icons-outlined.mi-2xl { font-size: 48px; }

@@ -9,7 +9,7 @@ import { PblService, DwInfo, DwAnalysisResult } from '../../services/pbl.service
   template: `
     <div class="dw-analyzer">
       <div class="dw-header">
-        <h3>📊 DataWindow 分析</h3>
+        <h3><span class="material-icons" style="vertical-align:middle">bar_chart</span> DataWindow 分析</h3>
         <button class="btn-analyze" (click)="analyze()" [disabled]="loading || !rootPath">
           分析
         </button>
@@ -24,8 +24,8 @@ import { PblService, DwInfo, DwAnalysisResult } from '../../services/pbl.service
 
       @if (error) {
         <div class="error-state">
-          <span>⚠ {{ error }}</span>
-          <button class="btn-dismiss" (click)="error = ''">✕</button>
+          <span><span class="material-icons" style="font-size:16px">warning</span> {{ error }}</span>
+          <button class="btn-dismiss" (click)="error = ''"><span class="material-icons" style="font-size:16px">close</span></button>
         </div>
       }
 
@@ -46,7 +46,7 @@ import { PblService, DwInfo, DwAnalysisResult } from '../../services/pbl.service
             <h4>数据库表</h4>
             <div class="tags">
               @for (t of result.tables_found; track t) {
-                <span class="tag">🗃 {{ t }}</span>
+                <span class="tag"><span class="material-icons" style="font-size:14px;vertical-align:middle">dns</span> {{ t }}</span>
               }
             </div>
           </div>
@@ -57,7 +57,7 @@ import { PblService, DwInfo, DwAnalysisResult } from '../../services/pbl.service
           <div class="dw-list">
             @for (dw of result.datawindows; track dw.name) {
               <div class="dw-item" (click)="selectDw(dw)" [class.selected]="selectedDw?.name === dw.name">
-                <div class="dw-name">📊 {{ dw.name }}</div>
+                <div class="dw-name"><span class="material-icons" style="font-size:14px;vertical-align:middle">bar_chart</span> {{ dw.name }}</div>
                 @if (dw.tables.length > 0) {
                   <div class="dw-tables">{{ dw.tables.join(', ') }}</div>
                 }
@@ -92,14 +92,14 @@ import { PblService, DwInfo, DwAnalysisResult } from '../../services/pbl.service
           <div class="section sql-section">
             <div class="sql-header">
               <h4>SQL</h4>
-              <button class="btn-copy" (click)="copySql()">📋 复制</button>
+              <button class="btn-copy" (click)="copySql()"><span class="material-icons" style="font-size:14px">content_copy</span> 复制</button>
             </div>
             <pre class="sql-code">{{ selectedDw!.sql }}</pre>
           </div>
         } @else if (selectedDw && !selectedDw.sql && !sqlLoading) {
           <div class="section">
             <button class="btn-fetch-sql" (click)="fetchDwSql()">
-              🔍 获取 SQL
+              <span class="material-icons" style="font-size:16px;vertical-align:middle">search</span> 获取 SQL
             </button>
           </div>
         }

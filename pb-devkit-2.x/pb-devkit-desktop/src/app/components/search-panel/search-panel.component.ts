@@ -10,7 +10,7 @@ import { PblService, SearchResult } from '../../services/pbl.service';
   template: `
     <div class="search-panel">
       <div class="search-header">
-        <h3>🔍 全文搜索</h3>
+        <h3><span class="material-icons" style="vertical-align:middle">search</span> 全文搜索</h3>
       </div>
 
       <div class="search-form">
@@ -51,8 +51,8 @@ import { PblService, SearchResult } from '../../services/pbl.service';
 
       @if (error) {
         <div class="error-state">
-          <span>⚠ {{ error }}</span>
-          <button class="btn-dismiss" (click)="error = ''">✕</button>
+          <span><span class="material-icons" style="font-size:16px">warning</span> {{ error }}</span>
+          <button class="btn-dismiss" (click)="error = ''"><span class="material-icons" style="font-size:16px">close</span></button>
         </div>
       }
 
@@ -63,7 +63,7 @@ import { PblService, SearchResult } from '../../services/pbl.service';
         <div class="results-list">
           @for (name of typeResults; track name) {
             <div class="type-result-item">
-              <span class="type-icon">{{ typeIcon(selectedType) }}</span>
+              <span class="type-icon"><span class="material-icons" style="font-size:16px">{{ typeIcon(selectedType) }}</span></span>
               <span class="type-name">{{ name }}</span>
             </div>
           }
@@ -83,7 +83,7 @@ import { PblService, SearchResult } from '../../services/pbl.service';
           @for (group of groupedResults; track group.file) {
             <div class="file-group">
               <div class="file-name" (click)="group.collapsed = !group.collapsed">
-                <span>{{ group.collapsed ? '▶' : '▼' }}</span>
+                <span class="material-icons" style="font-size:14px">{{ group.collapsed ? 'chevron_right' : 'expand_more' }}</span>
                 <span>{{ getFileName(group.file) }}</span>
                 <span class="match-count">{{ group.matches.length }}</span>
               </div>
@@ -200,10 +200,10 @@ export class SearchPanelComponent {
 
   typeIcon(type: string): string {
     const icons: Record<string, string> = {
-      window: '🪟', datawindow: '📊', menu: '☰', function: 'ƒ',
-      structure: '🔷', userobject: '🧩', application: '🚀'
+      window: 'window', datawindow: 'bar_chart', menu: 'menu', function: 'functions',
+      structure: 'diamond', userobject: 'extension', application: 'rocket_launch'
     };
-    return icons[type] ?? '📄';
+    return icons[type] ?? 'description';
   }
 
   highlight(match: SearchResult): string {

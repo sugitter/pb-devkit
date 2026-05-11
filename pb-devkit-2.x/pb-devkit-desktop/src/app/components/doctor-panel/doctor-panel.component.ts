@@ -9,7 +9,7 @@ import { PblService, DoctorResult } from '../../services/pbl.service';
   template: `
     <div class="doctor-panel">
       <div class="panel-header">
-        <h3>🔧 环境诊断</h3>
+        <h3><span class="material-icons" style="vertical-align:middle">build</span> 环境诊断</h3>
         <button class="btn-run" (click)="runDoctor()" [disabled]="loading">
           {{ loading ? '检测中...' : '运行诊断' }}
         </button>
@@ -17,15 +17,15 @@ import { PblService, DoctorResult } from '../../services/pbl.service';
 
       @if (error) {
         <div class="error-state">
-          <span>⚠ {{ error }}</span>
-          <button class="btn-dismiss" (click)="error = ''">✕</button>
+          <span><span class="material-icons" style="font-size:16px">warning</span> {{ error }}</span>
+          <button class="btn-dismiss" (click)="error = ''"><span class="material-icons" style="font-size:16px">close</span></button>
         </div>
       }
 
       @if (result) {
         <div class="doctor-result">
           <div class="result-header">
-            <span class="status-icon">{{ result.success ? '✅' : '❌' }}</span>
+            <span class="status-icon"><span class="material-icons">{{ result.success ? 'check_circle' : 'cancel' }}</span></span>
             <span>环境诊断结果</span>
           </div>
 
@@ -33,7 +33,7 @@ import { PblService, DoctorResult } from '../../services/pbl.service';
             <!-- Python -->
             <div class="check-item" [class.ok]="result.python_version"
                  [class.fail]="!result.python_version">
-              <span class="check-icon">{{ result.python_version ? '✅' : '❌' }}</span>
+              <span class="check-icon"><span class="material-icons" style="font-size:16px">{{ result.python_version ? 'check_circle' : 'cancel' }}</span></span>
               <span class="check-label">Python</span>
               <span class="check-detail">
                 {{ result.python_version ?? '未安装 / 未找到' }}
@@ -43,7 +43,7 @@ import { PblService, DoctorResult } from '../../services/pbl.service';
             <!-- Rust -->
             <div class="check-item" [class.ok]="result.rust_available"
                  [class.fail]="!result.rust_available">
-              <span class="check-icon">{{ result.rust_available ? '✅' : '❌' }}</span>
+              <span class="check-icon"><span class="material-icons" style="font-size:16px">{{ result.rust_available ? 'check_circle' : 'cancel' }}</span></span>
               <span class="check-label">Rust</span>
               <span class="check-detail">
                 {{ result.rust_available ? '已安装' : '未安装' }}
@@ -53,7 +53,7 @@ import { PblService, DoctorResult } from '../../services/pbl.service';
             <!-- ORCA DLL -->
             <div class="check-item" [class.ok]="result.orca_dll_found"
                  [class.fail]="!result.orca_dll_found">
-              <span class="check-icon">{{ result.orca_dll_found ? '✅' : '⚠' }}</span>
+              <span class="check-icon"><span class="material-icons" style="font-size:16px">{{ result.orca_dll_found ? 'check_circle' : 'warning' }}</span></span>
               <span class="check-label">PBSpyORCA.dll</span>
               <span class="check-detail">
                 {{ result.orca_dll_found ? '已找到' : '未找到（import/build 功能不可用）' }}
@@ -64,7 +64,7 @@ import { PblService, DoctorResult } from '../../services/pbl.service';
           <!-- Issues -->
           @if (result.issues.length > 0) {
             <div class="issue-section">
-              <h4>❌ 问题</h4>
+              <h4><span class="material-icons" style="font-size:14px;vertical-align:middle;color:#dc2626">cancel</span> 问题</h4>
               <ul>
                 @for (issue of result.issues; track issue) {
                   <li class="issue-item">{{ issue }}</li>
@@ -76,7 +76,7 @@ import { PblService, DoctorResult } from '../../services/pbl.service';
           <!-- Warnings -->
           @if (result.warnings.length > 0) {
             <div class="warning-section">
-              <h4>⚠ 警告</h4>
+              <h4><span class="material-icons" style="font-size:14px;vertical-align:middle;color:#d97706">warning</span> 警告</h4>
               <ul>
                 @for (warn of result.warnings; track warn) {
                   <li class="warning-item">{{ warn }}</li>
@@ -86,7 +86,7 @@ import { PblService, DoctorResult } from '../../services/pbl.service';
           }
 
           @if (result.issues.length === 0 && result.warnings.length === 0) {
-            <div class="all-ok">🎉 所有环境检查通过，无问题。</div>
+            <div class="all-ok"><span class="material-icons" style="font-size:16px;vertical-align:middle">celebration</span> 所有环境检查通过，无问题。</div>
           }
         </div>
       }

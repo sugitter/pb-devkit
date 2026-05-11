@@ -58,8 +58,8 @@
 | 搜索面板 / Search panel | ❌ | ✅ `search-panel` | ✅ Done |
 | 反编译面板 / Decompile panel | ❌ | ✅ `decompile-panel` | ✅ Done |
 | 环境诊断面板 / Doctor panel | ❌ | ✅ `doctor-panel` | ✅ Done |
-| 报告查看器 / Report viewer | ❌ | ✅ (主界面集成 / integrated) | ✅ Done |
-| PE 信息视图 / PE info view | ❌ | ⏳ (接口已定义 / API defined) | ⏳ Pending |
+| 报告查看器 / Report viewer | ❌ | ✅ `report-view` | ✅ Done |
+| PE 信息视图 / PE info view | ❌ | ✅ `pe-view` | ✅ Done |
 | 项目管理界面 / Project management UI | ❌ | ⏳ (基础功能 / basic) | ⏳ Pending |
 
 ## 覆盖率统计 / Coverage Statistics
@@ -75,7 +75,7 @@
 | 报告 / Report | 3 | 3/3 (100%) | 3/3 (100%) | ✅ | ✅ |
 | ORCA 功能 / ORCA | 3 | 0/3 (0%) | 0/3 (0%) | ⏳ | ⏳ |
 | 高级功能 / Advanced | 5 | 0/5 (0%) | 0/5 (0%) | ⏳ | ⏳ |
-| **总计 / Total** | **28** | **20/28 (71%)** | **20/28 (71%)** | ⏳ | ⏳ |
+| **总计 / Total** | **28** | **20/28 (71%)** | **22/28 (79%)** | ⏳ | ✅ |
 
 > 注：ORCA 和高级功能依赖外部 DLL 或复杂度较高，列为 v2.1+ 规划。
 > Note: ORCA and advanced features depend on external DLLs or high complexity; planned for v2.1+.

@@ -10,12 +10,12 @@ import { FormsModule } from '@angular/forms';
     <div class="source-viewer">
       <div class="viewer-header">
         <div class="file-tab">
-          <span class="tab-icon">📝</span>
+          <span class="tab-icon"><span class="material-icons">description</span></span>
           <span class="tab-name">{{ entryName }}</span>
         </div>
         <div class="viewer-actions">
-          <button class="btn-action" (click)="copySource()" title="复制代码">📋 复制</button>
-          <button class="btn-action" (click)="toggleWrap()" title="折行">↩ 折行</button>
+          <button class="btn-action" (click)="copySource()" title="复制代码"><span class="material-icons" style="font-size:14px">content_copy</span> 复制</button>
+          <button class="btn-action" (click)="toggleWrap()" title="折行"><span class="material-icons" style="font-size:14px">wrap_text</span> 折行</button>
         </div>
       </div>
 
@@ -32,17 +32,17 @@ import { FormsModule } from '@angular/forms';
           <span>{{ lines.length }} 行</span>
           <span>{{ source.length }} 字符</span>
           @if (copied) {
-            <span class="copied-msg">✓ 已复制</span>
+            <span class="copied-msg"><span class="material-icons" style="font-size:14px">check</span> 已复制</span>
           }
         </div>
       } @else if (!entryName) {
         <div class="empty-state">
-          <div class="empty-icon">📄</div>
+          <div class="empty-icon"><span class="material-icons mi-xl">description</span></div>
           <p>选择一个 PBL 对象查看源码</p>
         </div>
       } @else {
         <div class="empty-state">
-          <div class="empty-icon">🔒</div>
+          <div class="empty-icon"><span class="material-icons mi-xl">lock</span></div>
           <p>此对象为编译对象，无法查看源码</p>
         </div>
       }

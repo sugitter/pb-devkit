@@ -45,18 +45,5 @@
         "installMode": "currentUser"
       }
     }
-  },
-  "plugins": {
-    "fs": {
-      "all": true,
-      "scope": ["**"]
-    },
-    "dialog": {
-      "all": true
-    },
-    "shell": {
-      "all": true,
-      "open": true
-    }
   }
 }

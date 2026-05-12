@@ -28,27 +28,19 @@
 - [x] 修复 Angular 编译错误 (@if/@for 转义问题)
 - [x] 修复 Rust mut 警告
 
-### 命令映射 (1.x → 2.x)
+### 命令实现 (2.x)
 
-| 1.x 命令 | 2.x 实现 | 状态 |
-|----------|----------|------|
-| doctor | project::run_doctor | ✅ |
-| init | project::detect_project | ✅ |
-| list | pbl::list_entries | ✅ |
-| export | pbl::export_pbl | ✅ |
-| import | - | ⏳ ORCA DLL |
-| build | - | ⏳ ORCA DLL |
-| decompile | decompile::* | ✅ |
-| autoexport | decompile::decompile_all | ✅ |
-| search | search::* | ✅ |
-| dw | dw::* | ✅ |
-| analyze | (含在项目中) | ✅ |
-| report | report::generate_report | ✅ |
-| refactor | - | ⏳ |
-| review | - | ⏳ |
-| snapshot | - | ⏳ |
-| workflow | - | ⏳ |
-| stats | report::generate_report | ✅ |
+| 模块 | 命令 | 状态 |
+|------|------|------|
+| pbl | parse, info, list, export, export-pbl | ✅ |
+| pe | file-type, analyze-pe, extract-pbd | ✅ |
+| project | project, find-pbl, doctor | ✅ |
+| search | search, search-type | ✅ |
+| dw | analyze-dw, dw-sql | ✅ |
+| decompile | decompile, decompile-all, list-decompile | ✅ |
+| report | report, export-report | ✅ |
+| orca | import, build, compile | ⏳ (需 DLL) |
+| advanced | refactor, review, snapshot, workflow, diff | ⏳ |
 
 ## ⏳ 待完成
 

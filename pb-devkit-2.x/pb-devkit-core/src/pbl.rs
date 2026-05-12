@@ -148,17 +148,19 @@ impl PblParser {
         }
 
         let mut header = [0u8; 1024];
-        file.read_exact(&mut header[..512])?;
+        file.read_exact(&mut header[..1024])?;
 
         // Check HDR* magic
         if &header[0..4] != b"HDR*" {
             return Err(PblError::InvalidFormat);
         }
 
-        // Detect Unicode (PB10+)
-        if file_size >= 1024 && &header[512..516] == b"HDR*" {
-            file.seek(SeekFrom::Start(0))?;
-            file.read_exact(&mut header)?;
+        // Detect Unicode format: check if offset 4 contains Unicode "P" (0x50 0x00)
+        // ANSI: offset 4 = 0x50 (ASCII 'P')
+        // Unicode: offset 4 = 0x50 0x00 (little-endian Unicode 'P')
+        let is_unicode = header[4] == 0x50 && header[5] == 0x00;
+        
+        if is_unicode {
             self.is_unicode = true;
             self.header_size = 1024;
             self.pb_version = PblVersion::Pb10;

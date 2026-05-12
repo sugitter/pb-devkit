@@ -1,7 +1,6 @@
 # ─── Legacy (local only, not pushed) ───
 pb-devkit-1.x/
 docs/SKILL.md
-docs/AGENT_SKILL.md
 
 # ─── Python (1.x) ───
 __pycache__/

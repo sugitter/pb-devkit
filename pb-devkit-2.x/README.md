@@ -77,7 +77,7 @@ npm run tauri dev
 | Project detect/find-PBL | ✅ | ✅ |
 | Environment doctor | ✅ | ✅ |
 
-**Current coverage**: 20/28 commands (71%)
+**Current coverage**: 20/20 CLI commands (100%), 22/28 Desktop features (79%)
 
 ### Tech Stack
 
@@ -166,7 +166,7 @@ npm run tauri dev
 | 项目检测/查找 PBL | ✅ | ✅ |
 | 环境诊断 | ✅ | ✅ |
 
-**当前覆盖率**：20/28 命令（71%）
+**当前覆盖率**：20/20 CLI 命令（100%），22/28 Desktop 功能（79%）
 
 ### 技术栈
 

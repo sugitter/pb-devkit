@@ -1,6 +1,8 @@
 # PB DevKit - Universal Agent Skill
 
 > **PowerBuilder 旧系统现代化工具包 — 适配所有 AI Agent 平台**
+> **最新状态**：CLI 20/20 命令 100% 完成 | Desktop 22/28 功能 79% 完成
+>
 > 适用于：WorkBuddy / OpenClaw / Claude Desktop / Cursor / GitHub Copilot Agent 等
 
 ## 安装

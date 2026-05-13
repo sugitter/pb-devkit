@@ -32,13 +32,15 @@
 
 | 模块 | 命令 | 状态 |
 |------|------|------|
-| pbl | parse, info, list, export, export-pbl | ✅ |
-| pe | file-type, analyze-pe, extract-pbd | ✅ |
-| project | project, find-pbl, doctor | ✅ |
-| search | search, search-type | ✅ |
-| dw | analyze-dw, dw-sql | ✅ |
-| decompile | decompile, decompile-all, list-decompile | ✅ |
-| report | report, export-report | ✅ |
+| pbl | parse, info, list, export, export-pbl | ✅ 100% |
+| pe | file-type, analyze-pe, extract-pbd | ✅ 100% |
+| project | project, find-pbl, doctor | ✅ 100% |
+| search | search, search-type | ✅ 100% |
+| dw | analyze-dw, dw-sql | ✅ 100% |
+| decompile | decompile, decompile-all, list-decompile | ✅ 100% |
+| report | report, export-report | ✅ 100% |
+| **CLI 总计** | **20 commands** | **✅ 100%** |
+| **Desktop** | **22 panels** | **✅ 79%** |
 | orca | import, build, compile | ⏳ (需 DLL) |
 | advanced | refactor, review, snapshot, workflow, diff | ⏳ |
 
@@ -57,4 +59,5 @@
 
 ### 文档
 - [x] 完善 README.md (中英双语)
-- [ ] 添加命令行使用示例
+- [x] 添加命令行使用示例 (CLI_EXAMPLES.md)
+- [x] 更新 FUNCTION_MATRIX.md (CLI 100% 完成)

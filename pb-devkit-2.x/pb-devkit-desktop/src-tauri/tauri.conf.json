@@ -7,7 +7,8 @@
     "beforeDevCommand": "npm run start",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist/pb-devkit-desktop/browser"
+    "frontendDist": "../dist/pb-devkit-desktop/browser",
+    "removeUnusedCommands": true
   },
   "app": {
     "windows": [

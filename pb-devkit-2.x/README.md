@@ -98,7 +98,7 @@ npm run tauri dev
 |--------|------|------|
 | 🔴 高 | DataWindow SQL 解析完善 | 支持嵌套查询、子查询、UNION、参数绑定 |
 | 🔴 高 | 批量导出进度显示 | CLI 进度条 + Desktop 进度 Modal |
-| 🟡 中 | PBL 版本检测增强 | 自动检测版本、区分 ANSI/Unicode |
+| 🟡 中 | PBL 版本检测增强 | 自动检测版本、区分 ANSI/Unicode、PB 12.5+ |
 | 🟡 中 | 搜索性能优化 | 并行搜索、索引文件、增量搜索 |
 | 🟢 低 | 高级功能 | refactor, review, snapshot, workflow |
 
@@ -196,7 +196,7 @@ npm run tauri dev
 |--------|------|------|
 | 🔴 高 | DataWindow SQL 解析完善 | 支持嵌套查询、子查询、UNION、参数绑定 |
 | 🔴 高 | 批量导出进度显示 | CLI 进度条 + Desktop 进度 Modal |
-| 🟡 中 | PBL 版本检测增强 | 自动检测版本、区分 ANSI/Unicode |
+| 🟡 中 | PBL 版本检测增强 | 自动检测版本、区分 ANSI/Unicode、PB 12.5+ |
 | 🟡 中 | 搜索性能优化 | 并行搜索、索引文件、增量搜索 |
 | 🟢 低 | 高级功能 | refactor, review, snapshot, workflow |
 

@@ -61,8 +61,7 @@
 - [ ] 支持 Stored Procedure 调用解析
 - [ ] 识别 Computed Column 和 Calculated Fields
 
-#### 2. 添加更多 PBL 版本支持检测
-- [ ] PB 4.0 之前的老版本 PBL 兼容
+#### 2. PBL 版本检测增强
 - [ ] 自动检测 PBL 版本（magic bytes 分析）
 - [ ] 区分 ANSI/Unicode 编码
 - [ ] 支持 PB 12.5+ 新增对象类型

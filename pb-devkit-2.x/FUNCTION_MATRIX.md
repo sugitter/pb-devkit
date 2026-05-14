@@ -45,7 +45,7 @@
 | review | ⏳ | ⏳ | ⏳ Pending | 复杂，使用频率低 / Complex, low usage |
 | snapshot | ⏳ | ⏳ | ⏳ Pending | 有用但非核心 / Useful but non-core |
 | workflow | ⏳ | ⏳ | ⏳ Pending | 高级自动化 / Advanced automation |
-| diff | ✅ | ⏳ | 🔄 CLI Done | 代码对比 / Code diff |
+| diff | ✅ | ✅ | ✅ Done | 代码对比 / Code diff |
 
 ## 前端功能对比 / Frontend Comparison
 
@@ -60,7 +60,8 @@
 | 环境诊断面板 / Doctor panel | ✅ `doctor-panel` | ✅ Done |
 | 报告查看器 / Report viewer | ✅ `report-view` | ✅ Done |
 | PE 信息视图 / PE info view | ✅ `pe-view` | ✅ Done |
-| 项目管理界面 / Project management UI | ⏳ (基础功能 / basic) | ⏳ Pending |
+| 代码对比面板 / Diff panel | ✅ `diff-panel` | ✅ Done |
+| 项目管理界面 / Project management UI | ✅ (via project-selector) | ✅ Done |
 
 ## 覆盖率统计 / Coverage Statistics
 

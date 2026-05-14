@@ -89,8 +89,8 @@ npm run tauri dev
 ### Roadmap
 
 - [ ] ORCA engine integration (requires PBSpyORCA.dll)
-- [ ] PE info view UI
-- [ ] Project statistics panel
+- [x] PE info view UI ✅
+- [x] Project statistics panel ✅
 - [ ] Advanced features: refactor, review, snapshot, workflow
 
 ---
@@ -178,8 +178,8 @@ npm run tauri dev
 ### 开发计划
 
 - [ ] ORCA 引擎集成（需要 PBSpyORCA.dll）
-- [ ] PE 信息视图 UI
-- [ ] 项目统计面板
+- [x] PE 信息视图 UI ✅
+- [x] 项目统计面板 ✅
 - [ ] 高级功能：重构、审查、快照、工作流
 
 ### License / 许可证

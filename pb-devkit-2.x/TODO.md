@@ -23,6 +23,7 @@
 - [x] 环境诊断面板 (doctor-panel)
 - [x] PE 信息视图 (pe-view)
 - [x] 报告查看器 (report-view)
+- [x] 项目统计面板 (project-stats) ← 新增
 
 ### 构建问题
 - [x] 修复 Angular 编译错误 (@if/@for 转义问题)

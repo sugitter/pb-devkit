@@ -7,3 +7,4 @@ pub mod search_cmd;
 pub mod dw_cmd;
 pub mod decompile_cmd;
 pub mod report_cmd;
+pub mod diff_cmd;

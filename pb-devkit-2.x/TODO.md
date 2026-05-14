@@ -43,7 +43,8 @@
 | **CLI 总计** | **20 commands** | **✅ 100%** |
 | **Desktop** | **22 panels** | **✅ 79%** |
 | orca | import, build, compile | ⏳ (需 DLL) |
-| advanced | refactor, review, snapshot, workflow, diff | ⏳ |
+| **new** | **diff** | 🔄 开发中 |
+| advanced | refactor, review, snapshot, workflow | ⏳ |
 
 ## ⏳ 待完成
 

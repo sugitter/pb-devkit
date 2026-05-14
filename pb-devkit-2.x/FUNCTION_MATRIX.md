@@ -45,7 +45,7 @@
 | review | ⏳ | ⏳ | ⏳ Pending | 复杂，使用频率低 / Complex, low usage |
 | snapshot | ⏳ | ⏳ | ⏳ Pending | 有用但非核心 / Useful but non-core |
 | workflow | ⏳ | ⏳ | ⏳ Pending | 高级自动化 / Advanced automation |
-| diff | ⏳ | ⏳ | ⏳ Pending | 代码对比 / Code diff |
+| diff | ✅ | ⏳ | 🔄 CLI Done | 代码对比 / Code diff |
 
 ## 前端功能对比 / Frontend Comparison
 
@@ -75,7 +75,7 @@
 | 报告 / Report | 3/3 (100%) | 3/3 (100%) | ✅ | ✅ |
 | ORCA 功能 / ORCA | 0/3 (0%) | 0/3 (0%) | ⏳ | ⏳ |
 | 高级功能 / Advanced | 0/5 (0%) | 0/5 (0%) | ⏳ | ⏳ |
-| **总计 / Total** | **20/20 (100%)** | **22/28 (79%)** | ✅ | ✅ |
+| **总计 / Total** | **21/21 (100%)** | **22/28 (79%)** | ✅ | ✅ |
 
 > 注：ORCA 和高级功能依赖外部 DLL 或复杂度较高，列为 v2.1+ 规划。
 > Note: ORCA and advanced features depend on external DLLs or high complexity; planned for v2.1+.

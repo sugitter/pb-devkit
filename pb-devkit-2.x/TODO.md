@@ -40,11 +40,10 @@
 | dw | analyze-dw, dw-sql | ✅ 100% |
 | decompile | decompile, decompile-all, list-decompile | ✅ 100% |
 | report | report, export-report | ✅ 100% |
-| **CLI 总计** | **20 commands** | **✅ 100%** |
+| **CLI 总计** | **21 commands** | **✅ 100%** |
 | **Desktop** | **22 panels** | **✅ 79%** |
 | orca | import, build, compile | ⏳ (需 DLL) |
-| **new** | **diff** | 🔄 开发中 |
-| advanced | refactor, review, snapshot, workflow | ⏳ |
+| advanced | refactor, review, snapshot, workflow, diff | ⏳ |
 
 ## ⏳ 待完成
 

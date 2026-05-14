@@ -7,7 +7,7 @@ use std::env;
 use std::process;
 
 mod commands;
-use commands::{pbl_cmd, pe_cmd, project_cmd, search_cmd, dw_cmd, decompile_cmd, report_cmd, diff_cmd};
+use commands::{pbl_cmd, pe_cmd, project_cmd, search_cmd, dw_cmd, decompile_cmd, report_cmd, diff_cmd, workflow_cmd};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -73,6 +73,8 @@ fn execute_command(cmd: &str, subargs: &[String]) -> Result<String, String> {
         "export-report" => report_cmd::export_report(subargs),
         // ── Diff command ──
         "diff" => diff_cmd::run_diff(subargs),
+        // ── Workflow command ──
+        "workflow" => workflow_cmd::run_workflow(subargs),
         // ── Help ──
         "--help" | "-h" | "help" => {
             print_usage();

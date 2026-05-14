@@ -1,6 +1,12 @@
 # PB DevKit 完整使用指南
 
-> **版本**: v1.2.0 | **协议**: MIT | **零外部依赖**（纯 Python 标准库）
+> **版本**: v1.2.0 (Python) → **推荐 v2.0.0 (Rust)** | **协议**: MIT
+
+⚠️ **本指南为 1.x Python 版本**。2.x 版本请参考：
+- `pb-devkit-2.x/README.md`
+- `pb-devkit-2.x/CLI_EXAMPLES.md`
+
+---
 
 PB DevKit 是一套完整的 PowerBuilder 旧系统现代化工具链，包含 **CLI 命令行工具** + **VS Code 插件** + **JetBrains IDEA 插件**，让你不打开 PB IDE 也能高效维护 PB 项目。
 

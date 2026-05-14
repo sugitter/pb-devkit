@@ -52,11 +52,34 @@
 - [ ] 版本快照
 - [ ] 重构引擎
 
-### 优化方向
-- [ ] 完善 DataWindow SQL 解析
-- [ ] 添加更多 PBL 版本支持检测
-- [ ] 优化搜索性能 (大项目) 
-- [ ] 添加批量导出进度显示
+### 优化方向 (v2.1)
+
+#### 1. 完善 DataWindow SQL 解析
+- [ ] 支持更多 SQL 语法：嵌套 SELECT、子查询、UNION
+- [ ] 解析 WHERE/ORDER BY/GROUP BY 完整表达式
+- [ ] 提取参数绑定信息（Retrieve arguments）
+- [ ] 支持 Stored Procedure 调用解析
+- [ ] 识别 Computed Column 和 Calculated Fields
+
+#### 2. 添加更多 PBL 版本支持检测
+- [ ] PB 4.0 之前的老版本 PBL 兼容
+- [ ] 自动检测 PBL 版本（magic bytes 分析）
+- [ ] 区分 ANSI/Unicode 编码
+- [ ] 支持 PB 12.5+ 新增对象类型
+
+#### 3. 优化搜索性能 (大项目)
+- [ ] 实现并行搜索（rayon 多线程）
+- [ ] 添加索引文件机制（首次搜索后生成 .idx）
+- [ ] 支持正则表达式搜索
+- [ ] 添加搜索结果缓存
+- [ ] 实现增量搜索（只搜变更文件）
+
+#### 4. 添加批量导出进度显示
+- [ ] CLI: 添加进度条（indicatord 或自定义）
+- [ ] CLI: 显示已导出/总数、当前文件、预计剩余时间
+- [ ] Desktop: 添加进度 Modal 组件
+- [ ] 支持中断（Ctrl+C）/取消按钮
+- [ ] 导出失败文件自动重试机制
 
 ### 文档
 - [x] 完善 README.md (中英双语)

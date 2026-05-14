@@ -91,7 +91,16 @@ npm run tauri dev
 - [ ] ORCA engine integration (requires PBSpyORCA.dll)
 - [x] PE info view UI ✅
 - [x] Project statistics panel ✅
-- [ ] Advanced features: refactor, review, snapshot, workflow
+
+### v2.1 优化方向 (Planning)
+
+| 优先级 | 功能 | 说明 |
+|--------|------|------|
+| 🔴 高 | DataWindow SQL 解析完善 | 支持嵌套查询、子查询、UNION、参数绑定 |
+| 🔴 高 | 批量导出进度显示 | CLI 进度条 + Desktop 进度 Modal |
+| 🟡 中 | PBL 版本检测增强 | 自动检测版本、区分 ANSI/Unicode |
+| 🟡 中 | 搜索性能优化 | 并行搜索、索引文件、增量搜索 |
+| 🟢 低 | 高级功能 | refactor, review, snapshot, workflow |
 
 ---
 
@@ -180,7 +189,16 @@ npm run tauri dev
 - [ ] ORCA 引擎集成（需要 PBSpyORCA.dll）
 - [x] PE 信息视图 UI ✅
 - [x] 项目统计面板 ✅
-- [ ] 高级功能：重构、审查、快照、工作流
+
+### v2.1 优化方向
+
+| 优先级 | 功能 | 说明 |
+|--------|------|------|
+| 🔴 高 | DataWindow SQL 解析完善 | 支持嵌套查询、子查询、UNION、参数绑定 |
+| 🔴 高 | 批量导出进度显示 | CLI 进度条 + Desktop 进度 Modal |
+| 🟡 中 | PBL 版本检测增强 | 自动检测版本、区分 ANSI/Unicode |
+| 🟡 中 | 搜索性能优化 | 并行搜索、索引文件、增量搜索 |
+| 🟢 低 | 高级功能 | refactor, review, snapshot, workflow |
 
 ### License / 许可证
 

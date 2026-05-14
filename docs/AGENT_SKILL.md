@@ -5,17 +5,53 @@
 >
 > 适用于：WorkBuddy / OpenClaw / Claude Desktop / Cursor / GitHub Copilot Agent 等
 
-## 安装
+---
 
-### 方式一：pip install（推荐）
+## ⚠️ 版本选择
+
+| 版本 | 技术栈 | 安装方式 |
+|------|--------|----------|
+| **pb-devkit-2.x** (推荐) | Rust + Tauri | `cargo build` |
+| pb-devkit-1.x | Python | `pip install pb-devkit` |
+
+---
+
+## 安装 (2.x 推荐)
+
+### 从源码编译
+
+```bash
+# 克隆仓库
+git clone https://github.com/sugitter/pb-devkit.git
+cd pb-devkit/pb-devkit-2.x
+
+# 构建 CLI
+cd pb-devkit-cli
+cargo build --release
+# 输出: target/release/pbdevkit.exe
+
+# 构建 Desktop GUI (需要 Node.js)
+cd ../pb-devkit-desktop
+npm install
+npm run tauri build
+```
+
+### 直接使用预编译
+
+下载 Release 包: https://github.com/sugitter/pb-devkit/releases
+
+---
+
+## 安装 (1.x 遗留)
+
+### pip install
 
 ```bash
 pip install pb-devkit
-# 全局可用
 pb --version
 ```
 
-### 方式二：从源码运行
+### 从源码运行
 
 ```bash
 git clone <repo-url> pb-devkit
@@ -23,13 +59,7 @@ cd pb-devkit
 python pb.py <command> [options]
 ```
 
-### 方式三：PyPI 安装（发布后）
-
-```bash
-pip install pb-devkit
-```
-
-**环境要求**: Python 3.9+，零外部依赖。
+**环境要求 (1.x)**: Python 3.9+，零外部依赖。
 
 ## 何时触发
 

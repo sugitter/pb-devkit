@@ -19,7 +19,7 @@ pub enum PblError {
     ParseError(String),
 }
 
-// PB Object Type constants
+// PB Object Type constants (PB5-PB12.6)
 pub const PB_OBJECT_TYPE: &[(&str, u8)] = &[
     ("application", 0),
     ("datawindow", 1),
@@ -36,6 +36,15 @@ pub const PB_OBJECT_TYPE: &[(&str, u8)] = &[
     ("embedded_sql", 12),
     ("web_service", 13),
     ("component", 14),
+];
+
+// PB 12.5+ 新增对象类型
+pub const PB_OBJECT_TYPE_12_5: &[(&str, u8)] = &[
+    ("soap_client", 15),
+    ("soap_server", 16),
+    ("web_proxy", 17),
+    ("nativejson", 18),
+    ("restclient", 19),
 ];
 
 // Source extension to type mapping (PB12+ Unicode)
@@ -62,7 +71,9 @@ const NODE_BLOCK_SIZE: u64 = 3072; // 6 x 512
 pub enum PblVersion {
     Pb5,    // PB5-PB9 (ANSI)
     Pb10,   // PB10-PB11 (Unicode)
-    Pb12,   // PB12+ (Unicode)
+    Pb12,   // PB12-PB12.5 (Unicode)
+    Pb125,  // PB 12.5+ (Unicode, new object types)
+    Pb126,  // PB 12.6+ (Unicode, latest)
     Unknown,
 }
 
@@ -71,7 +82,9 @@ impl PblVersion {
         match self {
             PblVersion::Pb5 => "PB5-PB9 (ANSI)",
             PblVersion::Pb10 => "PB10-PB11 (Unicode)",
-            PblVersion::Pb12 => "PB12+ (Unicode)",
+            PblVersion::Pb12 => "PB12-PB12.5 (Unicode)",
+            PblVersion::Pb125 => "PB 12.5+ (Unicode)",
+            PblVersion::Pb126 => "PB 12.6+ (Unicode)",
             PblVersion::Unknown => "Unknown",
         }
     }
@@ -80,9 +93,80 @@ impl PblVersion {
         match self {
             PblVersion::Pb5 => "PB5-PB9",
             PblVersion::Pb10 => "PB10-PB11",
-            PblVersion::Pb12 => "PB12+",
+            PblVersion::Pb12 => "PB12-PB12.5",
+            PblVersion::Pb125 => "PB 12.5+",
+            PblVersion::Pb126 => "PB 12.6+",
             PblVersion::Unknown => "Unknown",
         }
+    }
+
+    /// Detect PBL version from magic bytes and header
+    pub fn detect_from_header(header: &[u8]) -> (Self, bool) {
+        // Check HDR* magic at start
+        if &header[0..4] != b"HDR*" {
+            return (PblVersion::Unknown, false);
+        }
+
+        // Detect encoding from offset 4
+        // ANSI: offset 4 = 0x50 (ASCII 'P'), offset 5 = 0x00 or non-zero
+        // Unicode: offset 4 = 0x50 0x00 (little-endian Unicode 'P')
+        let is_unicode = header[4] == 0x50 && header[5] == 0x00;
+
+        if !is_unicode {
+            // ANSI format: PB5-PB9
+            // Check version string at offset 4-8
+            let version_str = String::from_utf8_lossy(&header[4..12]).trim_end_matches('\0');
+            if version_str.starts_with("PB") {
+                if let Ok(v) = version_str[2..].parse::<f32>() {
+                    if v >= 5.0 && v < 10.0 {
+                        return (PblVersion::Pb5, true);
+                    }
+                }
+            }
+            return (PblVersion::Pb5, true);
+        }
+
+        // Unicode format: check version string more carefully
+        let version_bytes = &header[4..20];
+        let mut version_str = String::new();
+        for chunk in version_bytes.chunks(2) {
+            if chunk.len() == 2 {
+                let ch = u16::from_le_bytes([chunk[0], chunk[1]]);
+                if ch == 0 { break; }
+                if let Some(c) = char::from_u32(ch as u32) {
+                    version_str.push(c);
+                }
+            }
+        }
+
+        let version_str = version_str.trim_end_matches('\0');
+
+        // Try to parse version from string like "PB12.5" or "PB10"
+        if version_str.starts_with("PB") {
+            let rest = &version_str[2..];
+            // Handle versions like "12", "12.5", "12.6"
+            if let Some(dot_pos) = rest.find('.') {
+                if let Ok(major) = rest[..dot_pos].parse::<i32>() {
+                    let minor = &rest[dot_pos + 1..];
+                    return match (major, minor.parse::<i32>().unwrap_or(0)) {
+                        (12, 0..=4) => (PblVersion::Pb12, true),
+                        (12, 5) => (PblVersion::Pb125, true),
+                        (12, 6..=9) => (PblVersion::Pb126, true),
+                        _ => (PblVersion::Pb12, true),
+                    };
+                }
+            } else if let Ok(v) = rest.parse::<i32>() {
+                return match v {
+                    10 | 11 => (PblVersion::Pb10, true),
+                    12 => (PblVersion::Pb12, true),
+                    13..=99 => (PblVersion::Pb126, true),
+                    _ => (PblVersion::Unknown, false),
+                };
+            }
+        }
+
+        // Default to PB12 for Unicode files without clear version
+        (PblVersion::Pb12, true)
     }
 }
 
@@ -155,19 +239,16 @@ impl PblParser {
             return Err(PblError::InvalidFormat);
         }
 
-        // Detect Unicode format: check if offset 4 contains Unicode "P" (0x50 0x00)
-        // ANSI: offset 4 = 0x50 (ASCII 'P')
-        // Unicode: offset 4 = 0x50 0x00 (little-endian Unicode 'P')
-        let is_unicode = header[4] == 0x50 && header[5] == 0x00;
+        // Use enhanced version detection
+        let (detected_version, is_valid) = PblVersion::detect_from_header(&header);
         
-        if is_unicode {
-            self.is_unicode = true;
-            self.header_size = 1024;
-            self.pb_version = PblVersion::Pb10;
-        } else {
-            self.header_size = 512;
-            self.pb_version = PblVersion::Pb5;
+        if !is_valid {
+            return Err(PblError::InvalidFormat);
         }
+
+        self.pb_version = detected_version;
+        self.is_unicode = matches!(detected_version, PblVersion::Pb10 | PblVersion::Pb12 | PblVersion::Pb125 | PblVersion::Pb126);
+        self.header_size = if self.is_unicode { 1024 } else { 512 };
 
         Ok(())
     }
@@ -309,6 +390,27 @@ impl PblParser {
             if *id == t {
                 return name.to_string();
             }
+        }
+        // Check PB 12.5+ types
+        for (name, id) in PB_OBJECT_TYPE_12_5 {
+            if *id == t {
+                return name.to_string();
+            }
+        }
+        // Also check compiled object types (extension-based)
+        let compiled_types = [
+            (".win", "window"),
+            (".dwo", "datawindow"),
+            (".prp", "property"),
+            (".udo", "userobject"),
+            (".fun", "function"),
+            (".str", "structure"),
+            (".apl", "application"),
+            (".men", "menu"),
+            (".pra", "project"),
+        ];
+        for (ext, name) in &compiled_types {
+            if t == 11 && *ext == ".win" { return "window".to_string(); }
         }
         "unknown".to_string()
     }

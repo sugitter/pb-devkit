@@ -2,6 +2,9 @@
 
 use pb_devkit_core::pbl::PblParser;
 use pb_devkit_core::types::PblEntryInfo;
+use indicatif::{ProgressBar, ProgressStyle};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 pub fn parse_pbl(args: &[String]) -> Result<String, String> {
     if args.is_empty() {
@@ -99,8 +102,51 @@ pub fn export_pbl(args: &[String]) -> Result<String, String> {
     let by_type = args.len() > 2 && args[2] == "--by-type";
 
     let parser = PblParser::new(pbl_path).map_err(|e| e.to_string())?;
-    match parser.export_pbl(output_dir, by_type) {
-        Ok(count) => Ok(format!("Exported {} entries to {}", count, output_dir)),
-        Err(e) => Err(e.to_string()),
+
+    // Get source entries count for progress bar
+    let source_entries: Vec<_> = parser.entries().iter()
+        .filter(|e| e.is_source)
+        .collect();
+    let total = source_entries.len();
+
+    if total == 0 {
+        return Ok("No source entries to export".to_string());
     }
+
+    // Create progress bar
+    let pb = ProgressBar::new(total as u64);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")
+            .progress_chars("#>-")
+    );
+    pb.set_message("Exporting...");
+
+    // Track exported count with Arc for sharing
+    let exported = Arc::new(AtomicUsize::new(0));
+    let output_path = std::path::Path::new(output_dir);
+    std::fs::create_dir_all(output_path).map_err(|e| e.to_string())?;
+
+    // Export with progress
+    for entry in source_entries {
+        if let Ok(source) = parser.export_entry(&entry.name) {
+            let file_path = if by_type {
+                let type_dir = output_path.join(&entry.entry_type_name);
+                std::fs::create_dir_all(&type_dir).ok();
+                type_dir.join(&entry.name)
+            } else {
+                output_path.join(&entry.name)
+            };
+
+            if std::fs::write(&file_path, &source).is_ok() {
+                let count = exported.fetch_add(1, Ordering::SeqCst) + 1;
+                pb.set_message(format!("Exporting: {}", &entry.name[..entry.name.len().min(30)]));
+                pb.set_position(count as u64);
+            }
+        }
+    }
+
+    pb.finish_with_message(format!("Done! Exported {} entries to {}", total, output_dir));
+
+    Ok(format!("Exported {} entries to {}", total, output_dir))
 }

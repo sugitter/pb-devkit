@@ -61,6 +61,7 @@ fn execute_command(cmd: &str, subargs: &[String]) -> Result<String, String> {
         // ── Search commands ──
         "search" => search_cmd::search_in_files(subargs),
         "search-type" => search_cmd::search_by_type(subargs),
+        "search-regex" => search_cmd::search_with_regex(subargs),
         // ── DataWindow commands ──
         "analyze-dw" => dw_cmd::analyze_datawindows(subargs),
         "dw-sql" => dw_cmd::get_dw_sql(subargs),

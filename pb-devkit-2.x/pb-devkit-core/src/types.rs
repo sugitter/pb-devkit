@@ -133,6 +133,37 @@ pub struct DwInfo {
     pub tables: Vec<String>,
     pub columns: Vec<String>,
     pub style: Option<String>,
+    // Enhanced SQL parsing (v2.1+)
+    pub where_clause: Option<String>,
+    pub order_by_clause: Option<String>,
+    pub group_by_clause: Option<String>,
+    pub arguments: Vec<DwArgument>,
+    pub computed_columns: Vec<ComputedColumn>,
+    pub has_union: bool,
+    pub union_sql: Option<String>,
+    pub subqueries: Vec<SubQuery>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DwArgument {
+    pub name: String,
+    pub data_type: Option<String>,
+    pub initial_value: Option<String>,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ComputedColumn {
+    pub name: String,
+    pub expression: String,
+    pub data_type: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SubQuery {
+    pub alias: Option<String>,
+    pub sql: String,
+    pub query_type: String, // "scalar", "exists", "in", "comparison"
 }
 
 #[derive(Debug, Serialize, Deserialize)]

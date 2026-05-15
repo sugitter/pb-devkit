@@ -1,4 +1,5 @@
 // Search commands for CLI - delegates to pb-devkit-core
+// Enhanced v2.1: Parallel search, regex support
 
 use pb_devkit_core::search;
 use pb_devkit_core::types::SearchResults;
@@ -71,5 +72,45 @@ pub fn search_by_type(args: &[String]) -> Result<String, String> {
     if files.len() > 50 {
         output.push_str(&format!("... and {} more", files.len() - 50));
     }
+    Ok(output)
+}
+
+/// Search using regex pattern (v2.1+)
+pub fn search_with_regex(args: &[String]) -> Result<String, String> {
+    if args.len() < 2 {
+        return Err("Usage: pbdevkit search-regex <path> <pattern> [--case-sensitive]".to_string());
+    }
+    let root_path = &args[0];
+    let pattern = &args[1];
+    let case_sensitive = args.len() > 2 && args[2] == "--case-sensitive";
+
+    let result: SearchResults = search::search_with_regex(root_path, pattern, case_sensitive, &[])?;
+
+    if result.matches.is_empty() {
+        return Ok(format!(
+            "No matches found for regex '{}' in {} ({} files searched)",
+            pattern, root_path, result.files_count
+        ));
+    }
+
+    let mut output = format!(
+        "Regex search results for '{}' in {}:\n  Files searched: {}\n  Matches found: {}\n\n",
+        pattern, root_path, result.files_count, result.total_matches
+    );
+
+    for (i, m) in result.matches.iter().take(20).enumerate() {
+        output.push_str(&format!(
+            "{}. {} (line {}): {}\n",
+            i + 1,
+            m.file,
+            m.line_number,
+            m.line_content.trim().chars().take(60).collect::<String>()
+        ));
+    }
+
+    if result.matches.len() > 20 {
+        output.push_str(&format!("\n... and {} more matches", result.matches.len() - 20));
+    }
+
     Ok(output)
 }

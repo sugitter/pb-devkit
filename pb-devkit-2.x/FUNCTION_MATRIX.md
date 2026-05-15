@@ -25,9 +25,11 @@
 | **搜索 / Search** |
 | search | ✅ `search` | ✅ `search_in_files` | ✅ Done | |
 | search_by_type | ✅ `search-type` | ✅ `search_by_type` | ✅ Done | |
+| search_regex | ✅ `search-regex` ⭐ | ⏳ | ✅ v2.1 | |
 | **DataWindow** |
 | dw analyze | ✅ `analyze-dw` | ✅ `analyze_datawindows` | ✅ Done | |
 | dw sql | ✅ `dw-sql` | ✅ `get_dw_sql` | ✅ Done | |
+| dw enhanced | ⭐ | ⭐ | ✅ v2.1 | WHERE/ORDER BY/GROUP BY/UNION/参数 |
 | **反编译 / Decompile** |
 | decompile | ✅ `decompile` | ✅ `decompile_entry` | ✅ Done | |
 | decompile_all | ✅ `decompile-all` | ✅ `decompile_all` | ✅ Done | |

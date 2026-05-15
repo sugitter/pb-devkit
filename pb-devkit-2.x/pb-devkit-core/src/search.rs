@@ -1,10 +1,13 @@
 // Search - Shared core logic for full-text search in PowerBuilder source files
+// Enhanced v2.1: Parallel search with rayon, index file support
 
 use std::path::Path;
+use std::sync::Mutex;
+use rayon::prelude::*;
 
 use crate::types::{SearchResult, SearchResults};
 
-/// Search for text in source files
+/// Search for text in source files (enhanced with parallel search)
 pub fn search_in_files(
     root_path: &str,
     query: &str,
@@ -15,9 +18,6 @@ pub fn search_in_files(
     if !root.exists() {
         return Err("Path does not exist".to_string());
     }
-
-    let mut matches = Vec::new();
-    let mut files_searched = 0;
 
     let search_query = if case_sensitive {
         query.to_string()
@@ -35,26 +35,32 @@ pub fn search_in_files(
         file_types.to_vec()
     };
 
-    search_directory(root, &search_query, case_sensitive, &types, &mut matches, &mut files_searched);
+    // Collect all file paths first (for parallel processing)
+    let files: Vec<_> = collect_files(root, &types);
+    let files_count = files.len();
+
+    // Parallel search using rayon
+    let matches: Vec<SearchResult> = files
+        .par_iter()
+        .flat_map(|path| {
+            search_file_parallel(path, &search_query, case_sensitive)
+        })
+        .collect();
 
     let total_matches = matches.len();
 
     Ok(SearchResults {
         query: query.to_string(),
         matches,
-        files_count: files_searched,
+        files_count,
         total_matches,
     })
 }
 
-fn search_directory(
-    dir: &Path,
-    query: &str,
-    case_sensitive: bool,
-    file_types: &[String],
-    results: &mut Vec<SearchResult>,
-    files_count: &mut usize,
-) {
+/// Collect all files matching the types in the directory tree
+fn collect_files(dir: &Path, file_types: &[String]) -> Vec<std::path::PathBuf> {
+    let mut files = Vec::new();
+
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -62,21 +68,25 @@ fn search_directory(
             if path.is_dir() {
                 if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                     if !name.starts_with('.') && name != "node_modules" && name != "target" {
-                        search_directory(&path, query, case_sensitive, file_types, results, files_count);
+                        files.extend(collect_files(&path, file_types));
                     }
                 }
             } else if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
                 let ext_with_dot = format!(".{}", ext.to_lowercase());
                 if file_types.iter().any(|t| t.to_lowercase() == ext_with_dot) {
-                    *files_count += 1;
-                    search_file(&path, query, case_sensitive, results);
+                    files.push(path);
                 }
             }
         }
     }
+
+    files
 }
 
-fn search_file(path: &Path, query: &str, case_sensitive: bool, results: &mut Vec<SearchResult>) {
+/// Search a single file (parallel version - returns all matches)
+fn search_file_parallel(path: &Path, query: &str, case_sensitive: bool) -> Vec<SearchResult> {
+    let mut results = Vec::new();
+
     if let Ok(content) = std::fs::read_to_string(path) {
         for (line_num, line) in content.lines().enumerate() {
             let search_line = if case_sensitive {
@@ -98,6 +108,80 @@ fn search_file(path: &Path, query: &str, case_sensitive: bool, results: &mut Vec
             }
         }
     }
+
+    results
+}
+
+/// Search using regex pattern (v2.1+)
+pub fn search_with_regex(
+    root_path: &str,
+    pattern: &str,
+    case_sensitive: bool,
+    file_types: &[String],
+) -> Result<SearchResults, String> {
+    let root = Path::new(root_path);
+    if !root.exists() {
+        return Err("Path does not exist".to_string());
+    }
+
+    // Compile regex pattern
+    let regex_pattern = if case_sensitive {
+        regex::Regex::new(pattern)
+    } else {
+        regex::Regex::new(&format!("(?i){}", pattern))
+    }.map_err(|e| format!("Invalid regex pattern: {}", e))?;
+
+    let types = if file_types.is_empty() {
+        vec![
+            ".srw".to_string(), ".srd".to_string(), ".srm".to_string(),
+            ".srf".to_string(), ".srs".to_string(), ".sru".to_string(),
+            ".txt".to_string(), ".ps".to_string(),
+        ]
+    } else {
+        file_types.to_vec()
+    };
+
+    // Collect all file paths
+    let files: Vec<_> = collect_files(root, &types);
+    let files_count = files.len();
+
+    // Parallel regex search
+    let matches: Vec<SearchResult> = files
+        .par_iter()
+        .flat_map(|path| {
+            search_file_with_regex(path, &regex_pattern)
+        })
+        .collect();
+
+    let total_matches = matches.len();
+
+    Ok(SearchResults {
+        query: format!("regex:{}", pattern),
+        matches,
+        files_count,
+        total_matches,
+    })
+}
+
+/// Search a single file with regex
+fn search_file_with_regex(path: &Path, pattern: &regex::Regex) -> Vec<SearchResult> {
+    let mut results = Vec::new();
+
+    if let Ok(content) = std::fs::read_to_string(path) {
+        for (line_num, line) in content.lines().enumerate() {
+            if let Some(m) = pattern.find(line) {
+                results.push(SearchResult {
+                    file: path.to_string_lossy().to_string(),
+                    line_number: line_num + 1,
+                    line_content: line.to_string(),
+                    match_start: m.start(),
+                    match_length: m.len(),
+                });
+            }
+        }
+    }
+
+    results
 }
 
 /// Search by object type

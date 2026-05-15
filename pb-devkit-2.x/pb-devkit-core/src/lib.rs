@@ -5,6 +5,7 @@ pub mod pbl;
 pub mod pe;
 pub mod project;
 pub mod search;
+pub mod search_index;  // v2.1+: Index file mechanism
 pub mod dw;
 pub mod decompile;
 pub mod report;

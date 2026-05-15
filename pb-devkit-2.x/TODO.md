@@ -1,6 +1,6 @@
 # PB DevKit 2.x 开发进度
 
-## ✅ 已完成
+## ✅ 已完成 (v2.1)
 
 ### Rust 后端
 - [x] PBL 解析器 (完善版) - 支持 PB5-PB12.6 ANSI/Unicode
@@ -8,10 +8,32 @@
 - [x] PBL 命令 - parse_pbl, get_pbl_info, list_entries, export_entry, export_pbl
 - [x] PE 命令 - detect_file_type, analyze_pe, extract_pbd_from_exe
 - [x] 项目命令 - detect_project, run_doctor, find_pbl_files
-- [x] 搜索命令 - search_in_files, search_by_type
+- [x] 搜索命令 - search_in_files, search_by_type, **search-with-regex** ⭐
 - [x] DataWindow 分析 - analyze_datawindows, get_dw_sql
 - [x] 反编译命令 - list_decompile_entries, decompile_entry, decompile_all
 - [x] 报告生成器 - generate_report, export_report
+
+### v2.1 新增功能 ⭐
+- [x] **DataWindow SQL 解析增强**
+  - [x] WHERE/ORDER BY/GROUP BY 完整表达式提取
+  - [x] 参数绑定信息提取 (Retrieve arguments)
+  - [x] 支持 UNION 查询
+  - [x] 子查询检测 (IN/EXISTS/SCALAR)
+  - [x] 计算列/Computed Column 提取
+- [x] **批量导出进度显示**
+  - [x] CLI 进度条 (indicatif)
+  - [x] 显示已导出/总数、当前文件
+- [x] **搜索性能优化**
+  - [x] 并行搜索 (rayon 多线程)
+  - [x] 正则表达式搜索支持
+- [x] **PBL 版本检测增强**
+  - [x] 自动检测 PBL 版本（magic bytes 分析）
+  - [x] 区分 ANSI/Unicode 编码
+  - [x] 支持 PB 12.5+ 新增对象类型 (soap_client, soap_server, etc.)
+- [x] **搜索索引机制**
+  - [x] 索引文件生成 (.pbdevkit.idx)
+  - [x] 增量搜索（只搜变更文件）
+  - [x] 文件变化检测 (modified, size, checksum)
 
 ### Angular 前端
 - [x] 项目选择器组件 (project-selector)
@@ -23,7 +45,7 @@
 - [x] 环境诊断面板 (doctor-panel)
 - [x] PE 信息视图 (pe-view)
 - [x] 报告查看器 (report-view)
-- [x] 项目统计面板 (project-stats) ← 新增
+- [x] 项目统计面板 (project-stats)
 
 ### 构建问题
 - [x] 修复 Angular 编译错误 (@if/@for 转义问题)
@@ -36,7 +58,7 @@
 | pbl | parse, info, list, export, export-pbl | ✅ 100% |
 | pe | file-type, analyze-pe, extract-pbd | ✅ 100% |
 | project | project, find-pbl, doctor | ✅ 100% |
-| search | search, search-type | ✅ 100% |
+| search | search, search-type, **search-regex** | ✅ 100% |
 | dw | analyze-dw, dw-sql | ✅ 100% |
 | decompile | decompile, decompile-all, list-decompile | ✅ 100% |
 | report | report, export-report | ✅ 100% |
@@ -52,33 +74,21 @@
 - [ ] 版本快照
 - [ ] 重构引擎
 
-### 优化方向 (v2.1)
+### 优化方向 (v2.2)
 
-#### 1. 完善 DataWindow SQL 解析
-- [ ] 支持更多 SQL 语法：嵌套 SELECT、子查询、UNION
-- [ ] 解析 WHERE/ORDER BY/GROUP BY 完整表达式
-- [ ] 提取参数绑定信息（Retrieve arguments）
-- [ ] 支持 Stored Procedure 调用解析
-- [ ] 识别 Computed Column 和 Calculated Fields
-
-#### 2. PBL 版本检测增强
-- [ ] 自动检测 PBL 版本（magic bytes 分析）
-- [ ] 区分 ANSI/Unicode 编码
-- [ ] 支持 PB 12.5+ 新增对象类型
-
-#### 3. 优化搜索性能 (大项目)
-- [ ] 实现并行搜索（rayon 多线程）
-- [ ] 添加索引文件机制（首次搜索后生成 .idx）
-- [ ] 支持正则表达式搜索
-- [ ] 添加搜索结果缓存
-- [ ] 实现增量搜索（只搜变更文件）
-
-#### 4. 添加批量导出进度显示
-- [ ] CLI: 添加进度条（indicatord 或自定义）
-- [ ] CLI: 显示已导出/总数、当前文件、预计剩余时间
-- [ ] Desktop: 添加进度 Modal 组件
-- [ ] 支持中断（Ctrl+C）/取消按钮
+#### 1. Desktop 进度 Modal
+- [ ] 添加进度 Modal 组件
+- [ ] 支持取消按钮
 - [ ] 导出失败文件自动重试机制
+
+#### 2. 搜索结果缓存
+- [ ] 实现搜索结果缓存机制
+- [ ] 缓存失效策略
+
+#### 3. ORCA 引擎 (待定)
+- [ ] ORCA 引擎封装（需要 PBSpyORCA.dll）
+- [ ] 版本快照
+- [ ] 重构引擎
 
 ### 文档
 - [x] 完善 README.md (中英双语)

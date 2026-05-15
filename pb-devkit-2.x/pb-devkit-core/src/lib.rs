@@ -6,6 +6,7 @@ pub mod pe;
 pub mod project;
 pub mod search;
 pub mod search_index;  // v2.1+: Index file mechanism
+pub mod search_cache;  // v2.1+: Search result cache
 pub mod dw;
 pub mod decompile;
 pub mod report;

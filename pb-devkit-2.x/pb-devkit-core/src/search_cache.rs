@@ -2,7 +2,7 @@
 // v2.1+: Supports cache invalidation, TTL, LRU eviction
 
 use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 
 /// Cache entry for a single search query

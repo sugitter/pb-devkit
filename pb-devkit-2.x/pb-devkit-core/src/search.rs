@@ -2,7 +2,6 @@
 // Enhanced v2.1: Parallel search with rayon, index file support
 
 use std::path::Path;
-use std::sync::Mutex;
 use rayon::prelude::*;
 
 use crate::types::{SearchResult, SearchResults};

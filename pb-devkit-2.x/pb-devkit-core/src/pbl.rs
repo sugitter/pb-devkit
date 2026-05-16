@@ -115,7 +115,8 @@ impl PblVersion {
         if !is_unicode {
             // ANSI format: PB5-PB9
             // Check version string at offset 4-8
-            let version_str = String::from_utf8_lossy(&header[4..12]).trim_end_matches('\0');
+            let version_str_owned = String::from_utf8_lossy(&header[4..12]);
+            let version_str = version_str_owned.trim_end_matches('\0');
             if version_str.starts_with("PB") {
                 if let Ok(v) = version_str[2..].parse::<f32>() {
                     if v >= 5.0 && v < 10.0 {
@@ -409,7 +410,7 @@ impl PblParser {
             (".men", "menu"),
             (".pra", "project"),
         ];
-        for (ext, name) in &compiled_types {
+        for (ext, _name) in &compiled_types {
             if t == 11 && *ext == ".win" { return "window".to_string(); }
         }
         "unknown".to_string()

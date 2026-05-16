@@ -117,8 +117,8 @@ pub fn export_pbl(args: &[String]) -> Result<String, String> {
     let pb = ProgressBar::new(total as u64);
     pb.set_style(
         ProgressStyle::default_bar()
-            .template("{spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")
-            .progress_chars("#>-")
+            .template("{spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")?
+            .progress_chars("#>-")?
     );
     pb.set_message("Exporting...");
 

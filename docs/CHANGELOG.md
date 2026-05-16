@@ -4,18 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [2.0.0] - 2026-05-XX
+## [2.0.0] - 2026-05-16
 
 > **Major Release**: Complete rewrite in Rust for better performance
 
 ### Added (2.x)
 - **Rust Core**: Zero-dependency PBL/PBD/PE parser (PB5-PB12.6)
 - **CLI**: 20 commands with interactive REPL (rustyline)
-- **Desktop GUI**: Tauri 2.x + Angular 17+ (10 UI components)
+- **Desktop GUI**: Tauri 2.x + Angular 17+ (11 UI components)
   - Project selector, PBL list, Source viewer
   - DataWindow analyzer, Search panel
   - Decompile panel, Doctor panel
-  - PE view, Report view, Project stats
+  - PE view, Report view, Project stats (NEW)
 - **PE Analysis**: File type detection, header analysis, PBD extraction
 - **DataWindow**: SQL extraction, table/column analysis
 - **Function Matrix**: Complete CLI/Desktop feature coverage
@@ -23,8 +23,12 @@ All notable changes to this project will be documented in this file.
 ### Documentation
 - Updated README (EN/CN bilingual)
 - Added CLI_EXAMPLES.md
-- Updated FUNCTION_MATRIX.md (CLI 100% complete)
+- Updated FUNCTION_MATRIX.md (CLI 100%, Desktop 82%)
+- Updated AGENT_SKILL.md (v2.x commands)
 - Added v2.1 roadmap (optimization priorities)
+
+### Fixed
+- pbl_cmd.rs: Fix progress_chars Result handling (indicatif 0.17 compatibility)
 
 ### Known Issues
 - ORCA features require PBSpyORCA.dll (not included)

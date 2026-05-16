@@ -3,7 +3,7 @@
 > PowerBuilder 遗留系统工具包功能覆盖情况
 > PowerBuilder Legacy System Toolkit feature coverage
 
-> 更新时间 / Updated: 2026-05-12
+> 更新时间 / Updated: 2026-05-16
 
 ## 命令功能对比 / Command Comparison
 
@@ -78,7 +78,7 @@
 | 报告 / Report | 3/3 (100%) | 3/3 (100%) | ✅ | ✅ |
 | ORCA 功能 / ORCA | 0/3 (0%) | 0/3 (0%) | ⏳ | ⏳ |
 | 高级功能 / Advanced | 0/5 (0%) | 0/5 (0%) | ⏳ | ⏳ |
-| **总计 / Total** | **22/22 (100%)** | **22/28 (79%)** | ✅ | ✅ |
+| **总计 / Total** | **22/22 (100%)** | **23/28 (82%)** | ✅ | ✅ |
 
 > 注：ORCA 和高级功能依赖外部 DLL 或复杂度较高，列为 v2.1+ 规划。
 > Note: ORCA and advanced features depend on external DLLs or high complexity; planned for v2.1+.
@@ -109,11 +109,11 @@
 
 ## 结论 / Conclusion
 
-1. **Desktop (Tauri + Angular) 功能基本完备**（22/28，79% 覆盖），核心功能已可用
-   **Desktop (Tauri + Angular) is largely complete** (22/28, 79% coverage), core features ready
+1. **Desktop (Tauri + Angular) 功能基本完备**（23/28，82% 覆盖），核心功能已可用
+   **Desktop (Tauri + Angular) is largely complete** (23/28, 82% coverage), core features ready
 2. **CLI 功能已全部实现**（20/20 核心命令 ✅），覆盖所有核心场景
    **CLI is fully implemented** (20/20 core commands ✅), covering all core scenarios
 3. **ORCA 功能**需要 PBSpyORCA.dll 才能实施，列为下阶段目标
    **ORCA features** require PBSpyORCA.dll, planned for next phase
-4. **下一步**：完善项目统计面板、规划 ORCA 集成
-   **Next steps**: Complete project statistics panel, plan ORCA integration
+4. **下一步**：实现 project-stats 组件、规划 ORCA 集成
+   **Next steps**: Implement project-stats component, plan ORCA integration

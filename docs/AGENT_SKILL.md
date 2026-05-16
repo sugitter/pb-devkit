@@ -1,7 +1,7 @@
 # PB DevKit - Universal Agent Skill
 
 > **PowerBuilder 旧系统现代化工具包 — 适配所有 AI Agent 平台**
-> **最新状态**：CLI 20/20 命令 100% 完成 | Desktop 22/28 功能 79% 完成
+> **最新状态**：CLI 20/20 命令 100% 完成 | Desktop 23/28 功能 82% 完成
 >
 > 适用于：WorkBuddy / OpenClaw / Claude Desktop / Cursor / GitHub Copilot Agent 等
 
@@ -11,7 +11,7 @@
 
 | 版本 | 技术栈 | 安装方式 |
 |------|--------|----------|
-| **pb-devkit-2.x** (推荐) | Rust + Tauri | `cargo build` |
+| **pb-devkit-2.x** (推荐) | Rust + Tauri + Angular | `cargo build` |
 | pb-devkit-1.x | Python | `pip install pb-devkit` |
 
 ---
@@ -74,54 +74,72 @@ python pb.py <command> [options]
 - 版本追踪、快照管理
 - SQL 质量检查
 
-## 命令速查
+## 命令速查 (2.x - 推荐)
 
 ```bash
-# 环境诊断
+# ===== PBL 操作 =====
+pbdevkit parse <pbl>              # 解析 PBL 文件
+pbdevkit info <pbl>               # 获取 PBL 元信息
+pbdevkit list <pbl>               # 列出所有对象
+pbdevkit export <pbl> <name>      # 导出单个对象源码
+pbdevkit export-pbl <pbl> <dir>   # 批量导出 [--by-type]
+
+# ===== PE 分析 =====
+pbdevkit file-type <file>         # 检测文件类型
+pbdevkit analyze-pe <file>        # 分析 PE 结构
+pbdevkit extract-pbd <exe> <dir>  # 从 EXE 提取 PBD
+
+# ===== 项目管理 =====
+pbdevkit project <path>           # 检测 PB 项目
+pbdevkit find-pbl <path>          # 递归查找 PBL
+pbdevkit doctor                   # 环境诊断
+
+# ===== 搜索 =====
+pbdevkit search <path> <query>    # 全文搜索
+pbdevkit search-type <path> <type> # 按类型搜索
+
+# ===== DataWindow =====
+pbdevkit analyze-dw <path>        # 分析 DW SQL
+pbdevkit dw-sql <path>            # 获取 DW SQL
+
+# ===== 反编译 =====
+pbdevkit list-decompile <file>    # 列出 PBD 条目
+pbdevkit decompile <file> <name>  # 反编译单个条目
+pbdevkit decompile-all <file> <dir> # 批量反编译
+
+# ===== 报告 =====
+pbdevkit report <path>            # 生成项目报告
+pbdevkit export-report <path> <output.json> # 导出 JSON
+
+# ===== 交互模式 =====
+pbdevkit interactive              # 启动 REPL
+```
+
+### 交互模式示例
+
+```bash
+pbdevkit interactive
+# pbdevkit> parse myapp.pbl
+# pbdevkit> list myapp.pbl
+# pbdevkit> help
+# pbdevkit> exit
+```
+
+---
+
+## 遗留命令 (1.x - 不推荐)
+
+```bash
+# 1.x 版本命令 (Python)
 pb doctor [project_dir]
-
-# 项目初始化
 pb init <project_dir> [--json]
-
-# 列出 PBL 对象
 pb list <pbl_or_dir> [--json]
-
-# 导出源码
-pb export <pbl_or_dir> [output_dir] [--orca] [--no-headers]
-
-# 代码分析
-pb analyze <dir> [--json] [-t TYPE]
-
-# 项目分析（依赖+复杂度）
-pb analyze-project <dir> [--json]
-
-# 全文搜索
-pb search <pattern> <dir> [--mode text|sql|function] [-t TYPE]
-
-# 项目统计
-pb stats <dir> [--json]
-
-# 生成报告
-pb report <dir> [-o output.md] [--json]
-
-# 自动重构（默认 dry-run）
-pb refactor <dir> [--apply] [-v] [--json]
-
-# 差异对比
-pb diff <dir1> <dir2> [-v] [--json]
-
-# 版本快照（导出+对比+git commit）
-pb snapshot <pbl_or_dir> [output_dir] [-m message] [--no-git] [--no-diff] [-v] [--json]
-
-# 一键全流程
-pb workflow <pbl> [--apply] [--json]
-
-# 导入源码到 PBL（需要 ORCA DLL）
-pb import <pbl> <dir>
-
-# 编译构建（需要 ORCA DLL）
-pb build <pbl> <appname> [--exe output.exe]
-pb compile <pbl> <dir>
+pb export <pbl_or_dir> [output_dir]
+pb analyze <dir> [--json]
+pb search <pattern> <dir>
+pb report <dir> [-o output.md]
+pb refactor <dir> [--apply]
+pb snapshot <pbl_or_dir> [output_dir]
 ```
 
 所有命令支持 `--json` 输出 JSON，`-v` / `--verbose` 显示详情。

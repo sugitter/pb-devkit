@@ -42,6 +42,15 @@
   - [x] progress-modal 组件
   - [x] 进度条显示
   - [x] 支持取消按钮
+- [x] **版本快照功能**
+  - [x] ProjectSnapshot 结构体
+  - [x] 快照保存/加载
+  - [x] 快照对比 (SnapshotDiff)
+  - [x] SnapshotManager 工具类
+- [x] **导出失败自动重试机制**
+  - [x] Retry 工具类 (指数退避)
+  - [x] RetryConfig 配置
+  - [x] BatchExportResult 批量导出结果
 
 ### Angular 前端
 - [x] 项目选择器组件 (project-selector)
@@ -75,23 +84,12 @@
 | orca | import, build, compile | ⏳ (需 DLL) |
 | advanced | refactor, review, snapshot, workflow, diff | ⏳ |
 
-## ⏳ 待完成
+## ⏳ 待完成 (仅剩 ORCA 引擎)
 
-### Rust 后端
-- [ ] ORCA 引擎封装 (需要 PBSpyORCA.dll)
-- [ ] 版本快照
-- [ ] 重构引擎
+### 仅剩 ORCA 引擎
+- [ ] ORCA 引擎封装 (需要 PBSpyORCA.dll) - 待外部依赖
 
-### 优化方向 (v2.2 / 待定)
-
-#### 1. ORCA 引擎 (待定 - 需要 PBSpyORCA.dll)
-- [ ] ORCA 引擎封装
-- [ ] 版本快照
-- [ ] 重构引擎
-
-#### 2. 其他优化
-- [ ] 导出失败文件自动重试机制
-- [ ] 更多的 DataWindow SQL 语法支持
+> 注: v2.1 所有计划功能均已完成 ✅
 
 ### 文档
 - [x] 完善 README.md (中英双语)

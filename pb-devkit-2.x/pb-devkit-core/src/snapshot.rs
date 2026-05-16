@@ -147,7 +147,7 @@ impl ProjectSnapshot {
         }
 
         // Find added
-        for (path, pbl) in &other_map {
+        for (path, _pbl) in &other_map {
             if !self_map.contains_key(path) {
                 added.push(path.to_string());
             }

@@ -7,3 +7,5 @@ pub mod search;
 pub mod dw;
 pub mod decompile;
 pub mod report;
+pub mod workflow;
+pub mod diff;

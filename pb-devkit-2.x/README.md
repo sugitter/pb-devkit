@@ -1,4 +1,4 @@
-# PB DevKit 2.0
+# PB DevKit 2.1
 
 > PowerBuilder Legacy System Toolkit / PowerBuilder 遗留系统工具包
 
@@ -10,7 +10,7 @@
 
 ### Overview
 
-PB DevKit 2.0 is a modern toolkit for analyzing, maintaining, and migrating PowerBuilder legacy systems. Built with Rust for core parsing and Tauri + Angular for the desktop application.
+PB DevKit 2.1 is a modern toolkit for analyzing, maintaining, and migrating PowerBuilder legacy systems. Built with Rust for core parsing and Tauri + Angular for the desktop application.
 
 ### Features
 
@@ -108,7 +108,7 @@ npm run tauri dev
 
 ### 概述
 
-PB DevKit 2.0 是用于分析、维护和迁移 PowerBuilder 遗留系统的现代化工具包。采用 Rust 构建核心解析引擎，Tauri + Angular 构建桌面应用。
+PB DevKit 2.1 是用于分析、维护和迁移 PowerBuilder 遗留系统的现代化工具包。采用 Rust 构建核心解析引擎，Tauri + Angular 构建桌面应用。
 
 ### 功能特性
 

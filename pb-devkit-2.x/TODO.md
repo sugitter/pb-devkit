@@ -1,5 +1,19 @@
 # PB DevKit 2.x 开发进度
 
+## ✅ 已完成 (v2.1.0) - 2026-05-18 更新
+
+### 本次更新 (2026-05-18)
+- [x] CLI clippy 警告修复 (enumerate, unnecessary_to_owned)
+- [x] Tauri 后端添加 diff 命令 (diff_files API)
+- [x] 修复 Tauri 后端未使用的 import 警告
+- [x] CLI help 输出添加 search-regex 命令说明
+- [x] 版本号统一更新为 v2.1.0 (CLI/Cargo.toml/Core)
+- [x] 选择项目后自动加载第一个 PBL 的对象列表
+- [x] 新增 Settings 面板组件 (settings-panel)
+- [x] 侧边栏添加设置按钮
+
+---
+
 ## ✅ 已完成 (v2.1)
 
 ### Rust 后端

@@ -58,13 +58,14 @@ type FilterType = 'all' | 'source' | 'compiled';
       }
 
       @if (error) {
-        <div class="error-msg">{{ error }}</div>
+        <div class="msg-box" [class.success]="error.startsWith('✓')">{{ error }}</div>
       }
 
       <div class="entries-list">
         @for (entry of filteredEntries; track entry.name) {
           <div class="entry-item" [class.selected]="selectedEntry?.name === entry.name"
-               (click)="selectEntry(entry)">
+               (click)="selectEntry(entry)"
+               (dblclick)="onDblClick(entry)">
             <span class="type-badge" [class]="'type-' + entry.entry_type_name">
               <span class="material-icons" style="font-size:16px">{{ typeIcon(entry.entry_type_name) }}</span>
             </span>
@@ -73,7 +74,9 @@ type FilterType = 'all' | 'source' | 'compiled';
               <span class="entry-meta">{{ entry.entry_type_name }} · {{ formatSize(entry.size) }}</span>
             </div>
             @if (entry.is_source) {
-              <button class="btn-view" (click)="viewSource(entry, $event)">查看</button>
+              <button class="btn-view" (click)="viewSource(entry, $event)" title="查看源码">
+                <span class="material-icons" style="font-size:13px">code</span>
+              </button>
             }
           </div>
         }
@@ -104,6 +107,8 @@ type FilterType = 'all' | 'source' | 'compiled';
     .spinner { width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .error-msg { padding: 1rem; margin: 0.5rem 1rem; background: #fee2e2; color: #dc2626; border-radius: 6px; font-size: 0.875rem; }
+    .msg-box { padding: 0.6rem 1rem; margin: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.82rem; background: #fee2e2; color: #dc2626; }
+    .msg-box.success { background: #dcfce7; color: #166534; }
     .entries-list { flex: 1; overflow-y: auto; }
     .entry-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1rem; cursor: pointer; border-bottom: 1px solid #f3f4f6; }
     .entry-item:hover { background: #f9fafb; }
@@ -171,6 +176,17 @@ export class PblListComponent implements OnChanges {
     this.selectedEntry = entry;
   }
 
+  /** 双击直接查看源码 */
+  async onDblClick(entry: PblEntry) {
+    if (!entry.is_source) return;
+    try {
+      const source = await this.pblService.exportEntry(this.pblPath, entry.name);
+      this.entrySelected.emit({ path: this.pblPath, name: entry.name, source });
+    } catch (e: any) {
+      this.error = e.message || '读取源码失败';
+    }
+  }
+
   async viewSource(entry: PblEntry, event: Event) {
     event.stopPropagation();
     try {
@@ -195,7 +211,7 @@ export class PblListComponent implements OnChanges {
       this.error = '';
       // 简单 Toast 提示（用 error 字段借用，稍后 2 秒清除）
       this.error = '✓ ' + msg;
-      setTimeout(() => { if (this.error.startsWith('✅')) this.error = ''; }, 3000);
+      setTimeout(() => { if (this.error.startsWith('✓ ')) this.error = ''; }, 3000);
     } catch (e: any) {
       this.error = e.message ?? '导出失败';
     } finally {

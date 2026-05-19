@@ -19,3 +19,14 @@ pub fn search_in_files(
 pub fn search_by_type(root_path: String, object_type: String) -> Result<Vec<String>, String> {
     core::search::search_by_type(&root_path, &object_type)
 }
+
+/// Search using regex pattern
+#[tauri::command]
+pub fn search_with_regex(
+    root_path: String,
+    pattern: String,
+    case_sensitive: bool,
+    file_types: Vec<String>,
+) -> Result<SearchResults, String> {
+    core::search::search_with_regex(&root_path, &pattern, case_sensitive, &file_types)
+}

@@ -3,7 +3,7 @@
 > PowerBuilder 遗留系统工具包功能覆盖情况
 > PowerBuilder Legacy System Toolkit feature coverage
 
-> 更新时间 / Updated: 2026-05-16
+> 更新时间 / Updated: 2026-05-17
 
 ## 命令功能对比 / Command Comparison
 
@@ -58,11 +58,17 @@
 | 源码编辑器 / Source viewer | ✅ `source-viewer` | ✅ Done |
 | DataWindow 可视化 / DW analyzer | ✅ `dw-analyzer` | ✅ Done |
 | 搜索面板 / Search panel | ✅ `search-panel` | ✅ Done |
+| 正则搜索面板 / Regex search panel | ✅ `search-regex-panel` | ✅ Done |
 | 反编译面板 / Decompile panel | ✅ `decompile-panel` | ✅ Done |
 | 环境诊断面板 / Doctor panel | ✅ `doctor-panel` | ✅ Done |
 | 报告查看器 / Report viewer | ✅ `report-view` | ✅ Done |
 | PE 信息视图 / PE info view | ✅ `pe-view` | ✅ Done |
 | 代码对比面板 / Diff panel | ✅ `diff-panel` | ✅ Done |
+| 对象浏览器 / Object browser | ✅ `object-browser` | ✅ Done |
+| 项目统计面板 / Project stats | ✅ `project-stats` | ✅ Done |
+| 工作流面板 / Workflow panel | ✅ `workflow-panel` | ✅ Done |
+| 设置面板 / Settings panel | ✅ `settings-panel` | ✅ Done |
+| 进度弹窗 / Progress modal | ✅ `progress-modal` | ✅ Done |
 | 项目管理界面 / Project management UI | ✅ (via project-selector) | ✅ Done |
 
 ## 覆盖率统计 / Coverage Statistics
@@ -72,48 +78,50 @@
 | 核心 PBL 操作 / Core PBL | 4/4 (100%) | 4/4 (100%) | ✅ | ✅ |
 | PE 解析 / PE Analysis | 3/3 (100%) | 3/3 (100%) | ✅ | ✅ |
 | 项目管理 / Project Mgmt | 3/3 (100%) | 3/3 (100%) | ✅ | ✅ |
-| 搜索 / Search | 2/2 (100%) | 2/2 (100%) | ✅ | ✅ |
+| 搜索 / Search | 3/3 (100%) | 3/3 (100%) | ✅ | ✅ |
 | DataWindow | 2/2 (100%) | 2/2 (100%) | ✅ | ✅ |
 | 反编译 / Decompile | 3/3 (100%) | 3/3 (100%) | ✅ | ✅ |
 | 报告 / Report | 3/3 (100%) | 3/3 (100%) | ✅ | ✅ |
+| 代码对比 / Diff | 1/1 (100%) | 1/1 (100%) | ✅ | ✅ |
+| 工作流 / Workflow | 1/1 (100%) | 1/1 (100%) | ✅ | ✅ |
 | ORCA 功能 / ORCA | 0/3 (0%) | 0/3 (0%) | ⏳ | ⏳ |
-| 高级功能 / Advanced | 0/5 (0%) | 0/5 (0%) | ⏳ | ⏳ |
-| **总计 / Total** | **22/22 (100%)** | **23/28 (82%)** | ✅ | ✅ |
+| 高级功能 / Advanced | 0/3 (0%) | 0/3 (0%) | ⏳ | ⏳ |
+| **总计 / Total** | **24/24 (100%)** | **27/28 (96%)** | ✅ | ✅ |
 
-> 注：ORCA 和高级功能依赖外部 DLL 或复杂度较高，列为 v2.1+ 规划。
-> Note: ORCA and advanced features depend on external DLLs or high complexity; planned for v2.1+.
+> 注：ORCA 和高级功能依赖外部 DLL 或复杂度较高，列为 v2.2+ 规划。
+> Note: ORCA and advanced features depend on external DLLs or high complexity; planned for v2.2+.
 
 ## 优先级建议 / Priority Recommendations
 
-### 🔴 高优先级（v2.1）— High Priority (v2.1)
+### 🔴 高优先级（v2.2）— High Priority (v2.2)
 
 | 功能 / Feature | 原因 / Reason |
 |---------------|----------------|
 | ORCA 功能 / ORCA features | 需要 DLL，完成后可替代 PB IDE 编译/构建 / Requires DLL, enables PB IDE replacement |
 
-### 🟡 中优先级（v2.2）— Medium Priority (v2.2)
+### 🟡 中优先级（v2.3）— Medium Priority (v2.3)
 
 | 功能 / Feature | 原因 / Reason |
 |---------------|----------------|
-| 项目管理界面完善 / Project management UI | 当前只有基础功能 / Currently basic only |
-| diff 功能 / Diff | 代码对比是常见需求 / Common need for code comparison |
+| refactor | 自动化重构辅助 / Automated refactoring assistance |
+| review | 代码审查 / Code review |
+| snapshot | 快照对比 / Snapshot comparison |
 
-### 🟢 低优先级（v2.3+）— Low Priority (v2.3+)
+### 🟢 低优先级（v2.4+）— Low Priority (v2.4+)
 
 | 功能 / Feature | 原因 / Reason |
 |---------------|----------------|
-| refactor | 复杂，使用频率低 / Complex, low usage |
-| review | 复杂，使用频率低 / Complex, low usage |
-| snapshot | 有用但非核心 / Useful but non-core |
-| workflow | 高级自动化，使用频率低 / Advanced automation, low usage |
+| 项目管理界面增强 / Project management UI enhancement | 当前已满足基本需求 / Currently meets basic needs |
 
 ## 结论 / Conclusion
 
-1. **Desktop (Tauri + Angular) 功能基本完备**（23/28，82% 覆盖），核心功能已可用
-   **Desktop (Tauri + Angular) is largely complete** (23/28, 82% coverage), core features ready
-2. **CLI 功能已全部实现**（20/20 核心命令 ✅），覆盖所有核心场景
-   **CLI is fully implemented** (20/20 core commands ✅), covering all core scenarios
-3. **ORCA 功能**需要 PBSpyORCA.dll 才能实施，列为下阶段目标
+1. **Desktop (Tauri + Angular) 功能完备**（27/28，96% 覆盖），新增对象浏览器、项目统计、工作流面板
+   **Desktop (Tauri + Angular) is complete** (27/28, 96% coverage), added object browser, project stats, workflow panel
+2. **CLI 功能已全部实现**（24/24 核心命令 ✅），覆盖所有核心场景
+   **CLI is fully implemented** (24/24 core commands ✅), covering all core scenarios
+3. **Diff 和 Workflow 桌面端已完整集成后端**，代码对比支持行级差异展示，工作流支持可视化步骤
+   **Diff and Workflow desktop fully integrated with backend**, diff supports line-level change view, workflow supports visual steps
+4. **ORCA 功能**需要 PBSpyORCA.dll 才能实施，列为下阶段目标
    **ORCA features** require PBSpyORCA.dll, planned for next phase
-4. **下一步**：实现 project-stats 组件、规划 ORCA 集成
-   **Next steps**: Implement project-stats component, plan ORCA integration
+5. **下一步**：ORCA 集成、Tauri 打包发布
+   **Next steps**: ORCA integration, Tauri build & release

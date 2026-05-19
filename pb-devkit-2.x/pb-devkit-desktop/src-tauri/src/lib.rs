@@ -39,6 +39,9 @@ pub fn run() {
             // Search commands
             commands::search::search_in_files,
             commands::search::search_by_type,
+            commands::search::search_with_regex,
+            // Workflow commands
+            commands::workflow::run_workflow,
             // DataWindow commands
             commands::dw::analyze_datawindows,
             commands::dw::get_dw_sql,
@@ -49,6 +52,8 @@ pub fn run() {
             // Report commands
             commands::report::generate_report,
             commands::report::export_report,
+            // Diff commands
+            commands::diff::diff_files,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

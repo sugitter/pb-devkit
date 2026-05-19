@@ -110,7 +110,7 @@ fn start_interactive_mode() -> Result<(), String> {
         let _ = rl.load_history(p);
     }
 
-    println!("PB DevKit CLI v2.0.0 - Interactive Mode");
+    println!("PB DevKit CLI v2.1.0 - Interactive Mode");
     println!("Type 'help' for available commands, 'exit' / 'quit' / 'q' to quit.");
     println!();
 
@@ -175,7 +175,7 @@ fn start_interactive_mode() -> Result<(), String> {
 }
 
 fn print_usage() {
-    println!("PB DevKit CLI v2.0.0");
+    println!("PB DevKit CLI v2.1.0");
     println!("PowerBuilder Legacy System Toolkit");
     println!();
     println!("Usage: pbdevkit <command> [args...]");
@@ -200,10 +200,12 @@ fn print_usage() {
     println!("  find-pbl <path>       List all PBL files recursively");
     println!("  doctor                 Run environment diagnostics");
     println!();
-    println!("  Search:");
-    println!("  search <path> <query> Search in source files");
-    println!("  search-type <path> <type>");
-    println!("                        Search by object type");
+println!("  Search:");
+        println!("  search <path> <query> Search in source files");
+        println!("  search-type <path> <type>");
+        println!("                        Search by object type");
+        println!("  search-regex <path> <pattern>");
+        println!("                        Search using regex pattern");
     println!();
     println!("  DataWindow:");
     println!("  analyze-dw <path>     Analyze DataWindow objects");

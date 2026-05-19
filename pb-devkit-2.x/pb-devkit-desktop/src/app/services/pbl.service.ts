@@ -238,6 +238,23 @@ export class PblService {
     return invoke<string[]>('search_by_type', { rootPath, objectType });
   }
 
+  searchWithRegex(rootPath: string, pattern: string, caseSensitive: boolean, fileTypes: string[]): Promise<SearchResults> {
+    return invoke<SearchResults>('search_with_regex', { rootPath, pattern, caseSensitive, fileTypes });
+  }
+
+  // ──── Workflow 命令 ────
+
+  runWorkflow(source: string, outputDir: string, applyFix: boolean): Promise<{
+    success: boolean;
+    exported_count: number;
+    analyzed_count: number;
+    issues_found: number;
+    report_path: string;
+    message: string;
+  }> {
+    return invoke('run_workflow', { source, outputDir, applyFix });
+  }
+
   // ──── DataWindow 命令 ────
 
   analyzeDatawindows(rootPath: string): Promise<DwAnalysisResult> {

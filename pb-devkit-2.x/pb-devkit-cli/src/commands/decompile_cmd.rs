@@ -17,7 +17,7 @@ pub fn list_decompile_entries(args: &[String]) -> Result<String, String> {
     output.push_str(&"-".repeat(55));
     output.push('\n');
 
-    for (_i, e) in result.entries.iter().take(50).enumerate() {
+    for e in result.entries.iter().take(50) {
         let marker = if e.is_source { "[S]" } else { "[C]" };
         output.push_str(&format!(
             "{:<40} {:>6} {}\n",

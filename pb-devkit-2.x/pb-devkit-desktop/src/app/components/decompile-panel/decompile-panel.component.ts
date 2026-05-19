@@ -134,7 +134,8 @@ type FilterType = 'all' | 'source' | 'compiled';
           @for (entry of filteredEntries; track entry.name) {
             <div class="entry-item"
                  [class.selected]="selectedEntry?.name === entry.name"
-                 (click)="selectEntry(entry)">
+                 (click)="selectEntry(entry)"
+                 (dblclick)="onDblClick(entry)">
               <span class="type-badge"><span class="material-icons" style="font-size:16px">{{ typeIcon(entry.entry_type) }}</span></span>
               <div class="entry-info">
                 <span class="entry-name">{{ entry.name }}</span>
@@ -145,7 +146,9 @@ type FilterType = 'all' | 'source' | 'compiled';
                 </span>
               </div>
               @if (entry.is_source) {
-                <button class="btn-view" (click)="viewEntry(entry, $event)">查看</button>
+                <button class="btn-view" (click)="viewEntry(entry, $event)" title="查看源码">
+                  <span class="material-icons" style="font-size:13px">code</span>
+                </button>
               } @else {
                 <span class="compiled-badge">编译</span>
               }
@@ -267,6 +270,8 @@ export class DecompilePanelComponent implements OnChanges {
       this.reset();
       this.detectFileType();
       this.loadPeInfo();
+      // 自动触发分析，无需手动点击
+      this.loadEntries();
     }
   }
 
@@ -371,6 +376,21 @@ export class DecompilePanelComponent implements OnChanges {
 
   selectEntry(entry: DecompileEntry) {
     this.selectedEntry = entry;
+  }
+
+  /** 双击直接反编译并显示源码 */
+  async onDblClick(entry: DecompileEntry) {
+    if (!entry.is_source) return;
+    try {
+      const result = await this.pblService.decompileEntry(this.filePath, entry.name);
+      if (result.success && result.source) {
+        this.entrySelected.emit({ path: this.filePath, name: entry.name, source: result.source });
+      } else {
+        this.error = result.error ?? '反编译失败';
+      }
+    } catch (e: any) {
+      this.error = e.message ?? '反编译失败';
+    }
   }
 
   async viewEntry(entry: DecompileEntry, event: Event) {

@@ -115,11 +115,11 @@ pub fn export_pbl(args: &[String]) -> Result<String, String> {
 
     // Create progress bar
     let pb = ProgressBar::new(total as u64);
-    pb.set_style(
-        ProgressStyle::default_bar()
-            .template("{spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")?
-            .progress_chars("#>-")?
-    );
+    let style = ProgressStyle::default_bar()
+        .template("{spinner:.green} [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")
+        .map_err(|e| e.to_string())?
+        .progress_chars("#>-");
+    pb.set_style(style);
     pb.set_message("Exporting...");
 
     // Track exported count with Arc for sharing

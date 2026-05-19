@@ -31,7 +31,7 @@ pub fn run_workflow(args: &[String]) -> Result<String, String> {
     let analyze_result = analyze_project(output_dir);
     match analyze_result {
         Ok(report) => {
-            output.push_str(&format!("   ✅ Analysis complete\n"));
+            output.push_str("   ✅ Analysis complete\n");
             output.push_str(&format!("   - Files analyzed: {}\n", report.0));
             output.push_str(&format!("   - Issues found: {}\n\n", report.1));
         }

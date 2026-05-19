@@ -1,6 +1,7 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PblService, DwInfo, DwAnalysisResult } from '../../services/pbl.service';
+import { SettingsService } from '../settings-panel/settings-panel.component';
 
 @Component({
   selector: 'app-dw-analyzer',
@@ -163,7 +164,7 @@ import { PblService, DwInfo, DwAnalysisResult } from '../../services/pbl.service
     .empty-hint p { margin: 0; font-size: 0.85rem; }
   `]
 })
-export class DwAnalyzerComponent {
+export class DwAnalyzerComponent implements OnChanges {
   @Input() rootPath = '';
 
   result: DwAnalysisResult | null = null;
@@ -171,8 +172,19 @@ export class DwAnalyzerComponent {
   loading = false;
   sqlLoading = false;
   error = '';
+  private settingsService = SettingsService.getInstance();
 
   constructor(private pblService: PblService) {}
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['rootPath'] && this.rootPath) {
+      // 根据设置决定是否自动分析
+      const settings = this.settingsService.get();
+      if (settings.autoParse) {
+        this.analyze();
+      }
+    }
+  }
 
   async analyze() {
     if (!this.rootPath) return;

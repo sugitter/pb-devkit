@@ -54,6 +54,11 @@ pub fn run() {
             commands::report::export_report,
             // Diff commands
             commands::diff::diff_files,
+            // Scan/Migrate commands
+            commands::scan::scan_project,
+            commands::scan::migrate_project,
+            commands::scan::get_project_info,
+            commands::scan::find_project_pbls,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

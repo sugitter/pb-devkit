@@ -9,3 +9,4 @@ pub mod decompile;
 pub mod report;
 pub mod workflow;
 pub mod diff;
+pub mod scan;

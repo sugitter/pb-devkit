@@ -416,6 +416,51 @@ impl PblParser {
         "unknown".to_string()
     }
 
+    // ── Chunk Chain Parsing ──
+
+    /// Parse DAT* chunk chain to get raw data
+    pub fn parse_chunk_chain(&self, start_offset: u64, max_size: u64) -> Result<Vec<u8>, PblError> {
+        let mut file = File::open(&self.path)?;
+        let mut data = Vec::new();
+        let mut current_offset = start_offset;
+        let mut remaining = max_size;
+
+        while remaining > 0 {
+            let mut block = [0u8; 512];
+            file.seek(SeekFrom::Start(current_offset))?;
+            let bytes_read = file.read(&mut block)?;
+
+            if bytes_read < 4 || &block[0..4] != b"DAT*" {
+                break;
+            }
+
+            let chunk_size = (remaining as usize).min(508);
+            data.extend_from_slice(&block[4..4 + chunk_size]);
+            remaining -= chunk_size as u64;
+            current_offset += 512;
+        }
+
+        Ok(data)
+    }
+
+    /// Parse a single DAT* chunk
+    pub fn parse_dat_chunk(data: &[u8]) -> Option<(u32, Vec<u8>)> {
+        if data.len() < 8 || &data[0..4] != b"DAT*" {
+            return None;
+        }
+
+        let size = u32::from_le_bytes([data[4], data[5], data[6], data[7]]);
+        let chunk_data = data[8..].to_vec();
+        Some((size, chunk_data))
+    }
+
+    /// Get index block range for B-tree
+    pub fn get_index_block_range(&self) -> (u64, u64) {
+        let start = self.header_size + BLOCK_SIZE;
+        let end = start + NODE_BLOCK_SIZE;
+        (start, end)
+    }
+
     // ── Public accessors ──
 
     pub fn entries(&self) -> &Vec<PblEntry> {

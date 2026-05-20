@@ -327,7 +327,7 @@ interface TypeGroup {
 })
 export class DecompilePanelComponent implements OnChanges {
   @Input() filePath = '';
-  @Output() entrySelected = new EventEmitter<{ path: string; name: string; source: string }>();
+  @Output() entrySelected = new EventEmitter<{ path: string; name: string; source: string; error?: string }>();
 
   entries: DecompileEntry[] = [];
   groups: TypeGroup[] = [];
@@ -427,12 +427,16 @@ export class DecompilePanelComponent implements OnChanges {
       if (result.success && result.source) {
         this.entrySelected.emit({ path: this.filePath, name: entry.name, source: result.source });
       } else {
-        this.error = result.error ?? '反编译失败';
-        setTimeout(() => { this.error = ''; }, 3000);
+        const errMsg = result.error ?? '反编译失败';
+        this.error = errMsg;
+        this.entrySelected.emit({ path: this.filePath, name: entry.name, source: '', error: errMsg });
+        setTimeout(() => { this.error = ''; }, 4000);
       }
     } catch (e: any) {
-      this.error = e.message ?? '反编译失败';
-      setTimeout(() => { this.error = ''; }, 3000);
+      const errMsg = e.message ?? '反编译失败';
+      this.error = errMsg;
+      this.entrySelected.emit({ path: this.filePath, name: entry.name, source: '', error: errMsg });
+      setTimeout(() => { this.error = ''; }, 4000);
     }
   }
 

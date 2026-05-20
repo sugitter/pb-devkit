@@ -118,7 +118,7 @@ function applyKeywordsAndStrings(line: string): string {
         </div>
       </div>
 
-      @if (source) {
+      @if (hasSource) {
         <div class="code-container" [class.wrap]="wordWrap">
           <div class="line-numbers">
             @for (line of lines; track $index) {
@@ -141,12 +141,17 @@ function applyKeywordsAndStrings(line: string): string {
       } @else if (!entryName) {
         <div class="empty-state">
           <div class="empty-icon"><span class="material-icons mi-xl">description</span></div>
-          <p>选择一个 PBL 对象查看源码</p>
+          <p>双击左侧对象查看源码</p>
+        </div>
+      } @else if (loadError) {
+        <div class="empty-state">
+          <div class="empty-icon"><span class="material-icons mi-xl" style="color:#f87171">error_outline</span></div>
+          <p style="color:#f87171">{{ loadError }}</p>
         </div>
       } @else {
         <div class="empty-state">
-          <div class="empty-icon"><span class="material-icons mi-xl">lock</span></div>
-          <p>此对象为编译对象，无法查看源码</p>
+          <div class="empty-icon"><span class="material-icons mi-xl">hourglass_empty</span></div>
+          <p>加载中...</p>
         </div>
       }
     </div>
@@ -181,12 +186,18 @@ function applyKeywordsAndStrings(line: string): string {
 export class SourceViewerComponent implements OnChanges {
   @Input() entryName = '';
   @Input() source = '';
+  @Input() loadError = '';
 
   wordWrap = false;
   copied = false;
   highlightEnabled = true;
   lines: string[] = [];
   highlightedSource = '';
+
+  /** source 非 null 且非 undefined 时认为有源码（空字符串也算有，表示文件内容为空） */
+  get hasSource(): boolean {
+    return this.source !== null && this.source !== undefined && this.source.length > 0;
+  }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['source']) {

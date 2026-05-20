@@ -254,7 +254,7 @@ interface TypeGroup {
 })
 export class PblListComponent implements OnChanges {
   @Input() pblPath = '';
-  @Output() entrySelected = new EventEmitter<{ path: string; name: string; source: string }>();
+  @Output() entrySelected = new EventEmitter<{ path: string; name: string; source: string; error?: string }>();
 
   parseResult: ParseResult | null = null;
   selectedEntry: PblEntry | null = null;
@@ -354,8 +354,11 @@ export class PblListComponent implements OnChanges {
       const source = await this.pblService.exportEntry(this.pblPath, entry.name);
       this.entrySelected.emit({ path: this.pblPath, name: entry.name, source });
     } catch (e: any) {
-      this.statusMsg = e.message || '读取源码失败';
-      setTimeout(() => { this.statusMsg = ''; }, 3000);
+      const errMsg = e.message || '读取源码失败';
+      this.statusMsg = errMsg;
+      // 也把错误传给右栏显示，让用户知道出了什么问题
+      this.entrySelected.emit({ path: this.pblPath, name: entry.name, source: '', error: errMsg });
+      setTimeout(() => { this.statusMsg = ''; }, 4000);
     }
   }
 

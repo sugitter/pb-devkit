@@ -19,7 +19,7 @@ import { WorkflowPanelComponent } from './components/workflow-panel/workflow-pan
 import { PblService, ProjectInfo, PblFileInfo } from './services/pbl.service';
 
 type Tab = 'explorer' | 'search' | 'dw' | 'doctor' | 'pe' | 'report' | 'stats' | 'diff' | 'workflow' | 'settings';
-type ContentMode = 'welcome' | 'source';
+type ContentMode = 'welcome' | 'source' | 'loading';
 type SearchMode = 'text' | 'regex';
 
 /** 项目类型检测结果 */
@@ -197,38 +197,18 @@ type ProjectMode = 'pbl' | 'exe_pbd' | 'exe_dll' | 'mixed' | 'none';
 
           <!-- 右栏：源码查看器 -->
           <main class="source-panel">
-            @if (contentMode === 'source' && viewerSource) {
+            @if (contentMode === 'source' || contentMode === 'loading') {
               <app-source-viewer
                 [entryName]="viewerEntryName"
                 [source]="viewerSource"
+                [loadError]="viewerError"
               />
             } @else {
               <div class="welcome-screen">
                 <div class="welcome-icon"><span class="material-icons mi-2xl">bolt</span></div>
                 <h2>PB DevKit 2.1</h2>
-                <p>PowerBuilder Legacy System Toolkit</p>
-                <div class="feature-grid">
-                  <div class="feature-card" (click)="selectFolder()">
-                    <span class="feat-icon"><span class="material-icons mi-xl">folder_open</span></span>
-                    <h4>打开项目</h4>
-                    <p>选择项目文件夹，自动识别类型</p>
-                  </div>
-                  <div class="feature-card" (click)="selectSingleFile()">
-                    <span class="feat-icon"><span class="material-icons mi-xl">inventory_2</span></span>
-                    <h4>单文件分析</h4>
-                    <p>直接打开 PBL / PBD / EXE / DLL</p>
-                  </div>
-                  <div class="feature-card" (click)="activeTab='search'">
-                    <span class="feat-icon"><span class="material-icons mi-xl">search</span></span>
-                    <h4>全文搜索</h4>
-                    <p>快速定位代码中的任意内容</p>
-                  </div>
-                  <div class="feature-card" (click)="activeTab='dw'">
-                    <span class="feat-icon"><span class="material-icons mi-xl">bar_chart</span></span>
-                    <h4>DataWindow</h4>
-                    <p>分析 SQL、表结构、列引用关系</p>
-                  </div>
-                </div>
+                <p class="welcome-sub">PowerBuilder Legacy System Toolkit</p>
+                <p class="welcome-hint">← 选择左侧文件，在中栏双击对象查看源码</p>
               </div>
             }
           </main>
@@ -462,17 +442,12 @@ type ProjectMode = 'pbl' | 'exe_pbd' | 'exe_dll' | 'mixed' | 'none';
 
     /* 右栏：源码 */
     .source-panel { flex: 1; overflow: hidden; min-width: 0; background: #1e1e2e; }
-    .welcome-screen { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #a6adc8; padding: 2rem; background: #1e1e2e; }
+    .welcome-screen { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #a6adc8; padding: 2rem; background: #1e1e2e; text-align: center; }
     .welcome-icon { margin-bottom: 1rem; color: #cba6f7; }
     .welcome-icon .material-icons { font-size: 48px; }
     .welcome-screen h2 { margin: 0 0 0.5rem; color: #cdd6f4; font-size: 1.4rem; }
-    .welcome-screen > p { margin: 0 0 2rem; font-size: 0.85rem; color: #6c7086; }
-    .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; max-width: 420px; width: 100%; }
-    .feature-card { background: #181825; border: 1px solid #313244; border-radius: 8px; padding: 0.9rem; text-align: center; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
-    .feature-card:hover { border-color: #cba6f7; box-shadow: 0 2px 8px rgba(203,166,247,0.15); }
-    .feat-icon { display: block; margin-bottom: 0.4rem; color: #cba6f7; }
-    .feature-card h4 { margin: 0 0 0.2rem; color: #cdd6f4; font-size: 0.82rem; }
-    .feature-card p { margin: 0; font-size: 0.72rem; color: #6c7086; }
+    .welcome-sub { margin: 0 0 0.5rem; font-size: 0.85rem; color: #6c7086; }
+    .welcome-hint { margin: 0; font-size: 0.8rem; color: #45475a; }
 
     /* 其他 Tab 全宽布局 */
     .other-tab-layout { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; background: #f3f4f6; }
@@ -525,6 +500,7 @@ export class AppComponent {
   // 源码查看器
   viewerEntryName = '';
   viewerSource = '';
+  viewerError = '';
 
   showAbout = false;
 
@@ -632,9 +608,10 @@ export class AppComponent {
 
   // ──── 对象选择（来自中栏） ────
 
-  onEntrySelected(e: { path: string; name: string; source: string }) {
+  onEntrySelected(e: { path: string; name: string; source: string; error?: string }) {
     this.viewerEntryName = e.name;
-    this.viewerSource = e.source;
+    this.viewerSource = e.source ?? '';
+    this.viewerError = e.error ?? '';
     this.contentMode = 'source';
   }
 
@@ -648,6 +625,7 @@ export class AppComponent {
     this.selectedFilePath = '';
     this.viewerSource = '';
     this.viewerEntryName = '';
+    this.viewerError = '';
     this.contentMode = 'welcome';
   }
 

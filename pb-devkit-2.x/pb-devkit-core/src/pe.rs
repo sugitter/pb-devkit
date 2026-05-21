@@ -1,5 +1,16 @@
 // PE (Executable) Parser - Shared core implementation
 // Properly parses PE structure instead of scanning entire file.
+//
+// PowerBuilder EXE embedding strategy (PB 6~12):
+//   The PBL data (starting with HDR* magic) is **appended** after all PE
+//   sections, not placed inside the .rsrc Resource Directory.
+//   Detection algorithm:
+//     1. Parse DOS/PE/COFF/Section headers to find end-of-sections offset.
+//     2. Scan from that offset (± small alignment) for HDR* magic.
+//     3. Validate the found block by confirming HDR* at position 0.
+//
+//   Note: Some tools scan for PBD* (compiled libraries), but embedded PBLs
+//   use the HDR* (PBL header) signature, not PBD*.
 
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
@@ -21,7 +32,8 @@ pub enum PeError {
 
 const PE_MAGIC: &[u8; 2] = b"MZ";
 const PE_SIGNATURE: &[u8; 4] = b"PE\0\0";
-const PBD_MAGIC: &[u8; 4] = b"PBD*";
+/// PBL header magic – embedded PBLs start with this (ANSI and Unicode variants)
+const HDR_MAGIC: &[u8; 4] = b"HDR*";
 
 #[derive(Debug, Clone)]
 pub struct PeResource {
@@ -48,6 +60,8 @@ pub struct PeParser {
     machine_type: String,
     timestamp_str: Option<String>,
     resources: Vec<PeResource>,
+    /// File offset where the last PE section ends (start of appended area)
+    sections_end_offset: u64,
 }
 
 impl PeParser {
@@ -59,6 +73,7 @@ impl PeParser {
             machine_type: "unknown".to_string(),
             timestamp_str: None,
             resources: vec![],
+            sections_end_offset: 0,
         };
 
         parser.analyze()?;
@@ -114,129 +129,112 @@ impl PeParser {
         let ts_seconds = u32::from_le_bytes([coff[4], coff[5], coff[6], coff[7]]);
         self.timestamp_str = Some(format_rfc2822(ts_seconds));
 
-        // ── Optional Header ──
-        let opt_header_start = pe_offset + 24;
-        file.seek(SeekFrom::Start(opt_header_start))?;
-        let mut opt_header = vec![0u8; optional_header_size];
-        file.read_exact(&mut opt_header)?;
-
-        let _is_pe32_plus = optional_header_size > 0
-            && opt_header[0] == 0x0b
-            && opt_header[1] == 0x02;
-
-        // ── Section Headers ──
-        let sections_start = opt_header_start + optional_header_size as u64;
+        // ── Skip Optional Header, parse Section Table ──
+        let sections_start = pe_offset + 24 + optional_header_size as u64;
         file.seek(SeekFrom::Start(sections_start))?;
 
-        let mut rsrc_virtual_address: Option<u32> = None;
-        let mut rsrc_pointer_to_raw: Option<u32> = None;
-        let mut rsrc_size_of_raw: Option<u32> = None;
+        let mut max_section_end: u64 = 0;
 
         for _ in 0..num_sections {
             let mut section = [0u8; 40];
             file.read_exact(&mut section)?;
 
-            let name = &section[0..8];
-            let name_str = String::from_utf8_lossy(name).trim_end_matches('\0').to_string();
+            let raw_offset = u32::from_le_bytes([section[20], section[21], section[22], section[23]]) as u64;
+            let raw_size   = u32::from_le_bytes([section[16], section[17], section[18], section[19]]) as u64;
 
-            if name_str == ".rsrc" {
-                rsrc_virtual_address =
-                    Some(u32::from_le_bytes([section[12], section[13], section[14], section[15]]));
-                rsrc_pointer_to_raw =
-                    Some(u32::from_le_bytes([section[20], section[21], section[22], section[23]]));
-                rsrc_size_of_raw =
-                    Some(u32::from_le_bytes([section[16], section[17], section[18], section[19]]));
-                break;
+            if raw_offset > 0 && raw_size > 0 {
+                let end = raw_offset + raw_size;
+                if end > max_section_end {
+                    max_section_end = end;
+                }
             }
         }
 
-        // Detect PB EXE and scan resources
-        self.is_pb_exe = Self::detect_pb_exe_fast(&self.path)?;
+        self.sections_end_offset = max_section_end;
 
-        if self.is_pb_exe {
-            let _ = (rsrc_virtual_address, rsrc_pointer_to_raw, rsrc_size_of_raw);
-            self.scan_pbd_resources_fast()?;
-        }
+        // ── Scan for appended HDR* PBL data ──
+        self.scan_appended_hdr(&mut file)?;
 
         Ok(())
     }
 
-    /// Efficiently detect PBD* magic using buffered reads (8KB chunks)
-    fn detect_pb_exe_fast(path: &str) -> Result<bool, PeError> {
-        let mut file = File::open(path)?;
+    /// Scan for HDR* magic in the area appended after all PE sections.
+    ///
+    /// PB compilers append the PBL data starting at `sections_end_offset`.
+    /// We allow up to 4 KiB of alignment padding before giving up.
+    fn scan_appended_hdr(&mut self, file: &mut File) -> Result<(), PeError> {
         let file_size = file.metadata()?.len();
+        let scan_start = self.sections_end_offset;
 
-        let mut buffer = vec![0u8; 8192];
-        let mut offset: u64 = 0;
-
-        while offset < file_size {
-            let bytes_to_read = std::cmp::min(8192, file_size - offset);
-            file.seek(SeekFrom::Start(offset))?;
-            let n = file.read(&mut buffer[..bytes_to_read as usize])?;
-            if n < 4 {
-                break;
-            }
-
-            let scan_len = if offset + n as u64 >= file_size { n } else { n - 3 };
-
-            for i in 0..scan_len {
-                if &buffer[i..i + 4] == PBD_MAGIC {
-                    return Ok(true);
-                }
-            }
-
-            offset += (n - 3) as u64;
+        if scan_start >= file_size {
+            return Ok(());
         }
 
-        Ok(false)
-    }
+        // Fast path: check exact offset first (most common case)
+        file.seek(SeekFrom::Start(scan_start))?;
+        let mut magic_buf = [0u8; 4];
+        if file.read(&mut magic_buf)? >= 4 && &magic_buf == HDR_MAGIC {
+            let pbl_size = file_size - scan_start;
+            self.is_pb_exe = true;
+            self.resources.push(PeResource {
+                name: "embedded_pbl_1".to_string(),
+                offset: scan_start,
+                size: pbl_size,
+                resource_type: "PBL".to_string(),
+            });
+            return Ok(());
+        }
 
-    /// Efficiently scan for PBD* resources using buffered reads
-    fn scan_pbd_resources_fast(&mut self) -> Result<(), PeError> {
-        let mut file = File::open(&self.path)?;
-        let file_size = file.metadata()?.len();
+        // Slow path: scan up to 4096 bytes with 512-byte blocks (section alignment)
+        let scan_end = std::cmp::min(scan_start + 4096, file_size.saturating_sub(4));
+        let mut pbl_index = 0u32;
 
-        let mut buffer = vec![0u8; 8192];
-        let mut offset: u64 = 0;
-        let mut pbd_index = 0;
+        file.seek(SeekFrom::Start(scan_start))?;
+        let mut buffer = vec![0u8; 4096];
+        let n = file.read(&mut buffer)?;
 
-        while offset < file_size {
-            let bytes_to_read = std::cmp::min(8192, file_size - offset);
-            file.seek(SeekFrom::Start(offset))?;
-            let n = file.read(&mut buffer[..bytes_to_read as usize])?;
-            if n < 8 {
-                break;
+        let check_len = std::cmp::min(n, (scan_end - scan_start) as usize + 4);
+
+        // Scan in 512-byte aligned increments first (matches PBL block size)
+        let mut i = 0usize;
+        while i + 4 <= check_len {
+            if &buffer[i..i + 4] == HDR_MAGIC {
+                let abs_offset = scan_start + i as u64;
+                let pbl_size = file_size - abs_offset;
+                pbl_index += 1;
+                self.is_pb_exe = true;
+                self.resources.push(PeResource {
+                    name: format!("embedded_pbl_{}", pbl_index),
+                    offset: abs_offset,
+                    size: pbl_size,
+                    resource_type: "PBL".to_string(),
+                });
+                // One contiguous appended PBL expected; stop here
+                return Ok(());
             }
-
-            let scan_len = if offset + n as u64 >= file_size { n } else { n - 7 };
-
-            let mut i: usize = 0;
-            while i < scan_len {
-                if &buffer[i..i + 4] == PBD_MAGIC {
-                    let size = if i + 8 <= n {
-                        u32::from_le_bytes([buffer[i + 4], buffer[i + 5], buffer[i + 6], buffer[i + 7]]) as u64
-                    } else {
-                        let mut size_bytes = [0u8; 4];
-                        file.seek(SeekFrom::Start(offset + i as u64 + 4))?;
-                        file.read_exact(&mut size_bytes)?;
-                        u32::from_le_bytes(size_bytes) as u64
-                    };
-
-                    pbd_index += 1;
-                    self.resources.push(PeResource {
-                        name: format!("embedded_pbd_{}", pbd_index),
-                        offset: offset + i as u64,
-                        size,
-                        resource_type: "PBD".to_string(),
-                    });
-
-                    i += 512;
-                } else {
-                    i += 1;
-                }
+            // Advance by 512 (PBL block alignment), then byte-by-byte as fallback
+            if i == 0 {
+                i += 512;
+            } else {
+                i += 1;
             }
+        }
 
-            offset += (n - 7) as u64;
+        // Byte-granular fallback over the first 4096 bytes
+        for i in 0..check_len.saturating_sub(3) {
+            if &buffer[i..i + 4] == HDR_MAGIC {
+                let abs_offset = scan_start + i as u64;
+                let pbl_size = file_size - abs_offset;
+                pbl_index += 1;
+                self.is_pb_exe = true;
+                self.resources.push(PeResource {
+                    name: format!("embedded_pbl_{}", pbl_index),
+                    offset: abs_offset,
+                    size: pbl_size,
+                    resource_type: "PBL".to_string(),
+                });
+                return Ok(());
+            }
         }
 
         Ok(())
@@ -288,8 +286,8 @@ impl PeParser {
         } else if bytes_read >= 4 && &header[0..4] == b"PBD*" {
             ("pbd".to_string(), false)
         } else if bytes_read >= 2 && &header[0..2] == b"MZ" {
-            // Check if it's a PB EXE
-            let is_pb = Self::detect_pb_exe_fast(path).unwrap_or(false);
+            // Try full PE parse to detect appended PBL
+            let is_pb = Self::quick_detect_pb_exe(path).unwrap_or(false);
             ("exe".to_string(), is_pb)
         } else {
             ("unknown".to_string(), false)
@@ -298,7 +296,15 @@ impl PeParser {
         Ok(FileTypeResult { file_type, is_pb_exe: is_pb, version: None, size })
     }
 
-    /// Extract PBD resources to output directory
+    /// Quick check: parse sections, scan appended area for HDR*
+    fn quick_detect_pb_exe(path: &str) -> Result<bool, PeError> {
+        match PeParser::new(path) {
+            Ok(parser) => Ok(parser.is_pb_exe),
+            Err(_) => Ok(false),
+        }
+    }
+
+    /// Extract embedded PBL resources to output directory
     pub fn extract_resources(&self, output_dir: &str) -> Result<ExtractResult, PeError> {
         std::fs::create_dir_all(output_dir)?;
 
@@ -308,13 +314,17 @@ impl PeParser {
             let mut file = File::open(&self.path)?;
             file.seek(SeekFrom::Start(resource.offset))?;
 
-            // Skip 8-byte PBD* header, read actual data
             let data_size = resource.size as usize;
             let mut data = vec![0u8; data_size];
             file.read_exact(&mut data)?;
 
-            let output_path = format!("{}/{}.pbd", output_dir, resource.name);
-            std::fs::write(&output_path, &data)?;
+            // Name with .pbl extension so downstream PBL parsers recognise it
+            let out_name = if resource.resource_type == "PBL" {
+                format!("{}/{}.pbl", output_dir, resource.name)
+            } else {
+                format!("{}/{}.bin", output_dir, resource.name)
+            };
+            std::fs::write(&out_name, &data)?;
             extracted += 1;
         }
 

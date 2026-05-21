@@ -1,5 +1,6 @@
 // PBL Parser - Shared core implementation
 // Supports PB5-PB12.6 (ANSI + Unicode)
+// Also supports parsing embedded PBL from PE EXE files (appended HDR* area)
 
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
@@ -207,16 +208,23 @@ pub struct PblParser {
     is_unicode: bool,
     pb_version: PblVersion,
     header_size: u64,
+    /// For EXE files: the byte offset where the embedded PBL starts
+    pbl_data_offset: u64,
 }
 
 impl PblParser {
+    /// Create a parser from a `.pbl` file or a PE EXE that has an appended PBL.
     pub fn new(path: &str) -> Result<Self, PblError> {
+        // Detect file type by reading first 4 bytes
+        let pbl_offset = Self::detect_pbl_offset(path)?;
+
         let mut parser = PblParser {
             path: path.to_string(),
             entries: vec![],
             is_unicode: false,
             pb_version: PblVersion::Unknown,
             header_size: 512,
+            pbl_data_offset: pbl_offset,
         };
 
         parser.parse_header()?;
@@ -225,13 +233,47 @@ impl PblParser {
         Ok(parser)
     }
 
-    fn parse_header(&mut self) -> Result<(), PblError> {
-        let mut file = File::open(&self.path)?;
-        let file_size = file.metadata()?.len();
-        if file_size < 512 {
+    /// Returns the file offset where HDR* starts.
+    /// For PBL files this is 0.  For PE EXE files this is the appended offset.
+    fn detect_pbl_offset(path: &str) -> Result<u64, PblError> {
+        let mut file = File::open(path)?;
+        let mut magic = [0u8; 4];
+        let n = file.read(&mut magic)?;
+        if n < 2 {
             return Err(PblError::InvalidFormat);
         }
 
+        if &magic[0..2] == b"MZ" {
+            // PE EXE — use PeParser to find the appended PBL offset
+            use crate::pe::PeParser;
+            match PeParser::new(path) {
+                Ok(pe) => {
+                    let info = pe.info();
+                    if info.is_pb_exe && !info.resources.is_empty() {
+                        Ok(info.resources[0].offset)
+                    } else {
+                        Err(PblError::ParseError(
+                            "No embedded PBL found in EXE".to_string()
+                        ))
+                    }
+                }
+                Err(_) => Err(PblError::InvalidFormat),
+            }
+        } else if n >= 4 && &magic[0..4] == b"HDR*" {
+            Ok(0)
+        } else {
+            Err(PblError::InvalidFormat)
+        }
+    }
+
+    fn parse_header(&mut self) -> Result<(), PblError> {
+        let mut file = File::open(&self.path)?;
+        let file_size = file.metadata()?.len();
+        if file_size < self.pbl_data_offset + 512 {
+            return Err(PblError::InvalidFormat);
+        }
+
+        file.seek(SeekFrom::Start(self.pbl_data_offset))?;
         let mut header = [0u8; 1024];
         file.read_exact(&mut header[..1024])?;
 
@@ -258,7 +300,9 @@ impl PblParser {
         let mut file = File::open(&self.path)?;
         let file_size = file.metadata()?.len();
 
-        let entries_start = self.header_size + BLOCK_SIZE + NODE_BLOCK_SIZE;
+        // Adjust all offsets by pbl_data_offset (for EXE embedded PBL)
+        let base = self.pbl_data_offset;
+        let entries_start = base + self.header_size + BLOCK_SIZE + NODE_BLOCK_SIZE;
         file.seek(SeekFrom::Start(entries_start))?;
 
         let mut offset = entries_start;
@@ -304,7 +348,9 @@ impl PblParser {
             return None;
         }
 
-        let data_offset = u32::from_le_bytes([data[8], data[9], data[10], data[11]]) as u64;
+        let data_offset_raw = u32::from_le_bytes([data[8], data[9], data[10], data[11]]) as u64;
+        // data_offset_raw is relative to the PBL data start; add pbl_data_offset for EXE files
+        let data_offset = self.pbl_data_offset + data_offset_raw;
         let data_size = u32::from_le_bytes([data[12], data[13], data[14], data[15]]) as u64;
 
         let name_start = if self.is_unicode { 28 } else { 24 };
@@ -456,7 +502,7 @@ impl PblParser {
 
     /// Get index block range for B-tree
     pub fn get_index_block_range(&self) -> (u64, u64) {
-        let start = self.header_size + BLOCK_SIZE;
+        let start = self.pbl_data_offset + self.header_size + BLOCK_SIZE;
         let end = start + NODE_BLOCK_SIZE;
         (start, end)
     }

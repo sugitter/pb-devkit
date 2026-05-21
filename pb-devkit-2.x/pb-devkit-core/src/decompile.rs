@@ -36,7 +36,7 @@ pub fn list_decompile_entries(path: &str) -> DecompileListResult {
                 entries: vec![],
                 total_count: 0,
                 source_count: 0,
-                error: Some("Unable to parse file - not a valid PBL/PBD".to_string()),
+                error: Some("Unable to parse file - not a valid PBL/PBD/EXE".to_string()),
             }
         }
     }
@@ -74,30 +74,42 @@ pub fn decompile_entry(pbd_path: &str, entry_name: &str) -> DecompileResult {
 }
 
 /// Decompile all entries from PBD/EXE
+/// Note: For EXE files with only compiled objects (no embedded source),
+/// use the pb-devkit-1.x Python CLI which includes a full binary decompiler.
 pub fn decompile_all(pbd_path: &str, output_dir: &str) -> Result<String, String> {
     let parser = PblParser::new(pbd_path).map_err(|e| e.to_string())?;
 
     let output_path = Path::new(output_dir);
     std::fs::create_dir_all(output_path).map_err(|e| e.to_string())?;
 
+    let total = parser.entries().len();
+    let source_entries: Vec<_> = parser.entries().iter().filter(|e| e.is_source).cloned().collect();
+
+    if source_entries.is_empty() && total > 0 {
+        return Ok(format!(
+            "Found {} entries, all compiled binaries (no embedded source).\n\
+             Tip: Use pb-devkit 1.x Python CLI for full binary decompile:\n  \
+             pb export \"{}\" -o \"{}\"",
+            total, pbd_path, output_dir
+        ));
+    }
+
     let mut exported = 0;
     let mut failed = 0;
 
-    for entry in parser.entries() {
-        if entry.is_source {
-            match parser.export_entry(&entry.name) {
-                Ok(source) => {
-                    let file_path = output_path.join(&entry.name);
-                    if std::fs::write(&file_path, &source).is_ok() {
-                        exported += 1;
-                    } else {
-                        failed += 1;
-                    }
+    for entry in &source_entries {
+        match parser.export_entry(&entry.name) {
+            Ok(source) => {
+                let file_path = output_path.join(&entry.name);
+                if std::fs::write(&file_path, &source).is_ok() {
+                    exported += 1;
+                } else {
+                    failed += 1;
                 }
-                Err(_) => failed += 1,
             }
+            Err(_) => failed += 1,
         }
     }
 
-    Ok(format!("Exported: {}, Failed: {}", exported, failed))
+    Ok(format!("Exported: {} source files, Failed: {} (total entries: {})", exported, failed, total))
 }

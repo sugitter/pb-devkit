@@ -34,8 +34,6 @@ def register(sub: argparse.ArgumentParser) -> argparse.ArgumentParser:
                    help="Output diff report in JSON format")
     p.add_argument("--verbose", "-v", action="store_true",
                    help="Show detailed changes")
-    p.add_argument("--orca", action="store_true",
-                   help="Use PBORCA DLL for export")
     return p
 
 
@@ -49,7 +47,6 @@ def run(args):
     snapshot_dir = Path(args.snapshot_dir)
     use_git = not args.no_git
     do_diff = not args.no_diff
-    use_orca = args.orca
 
     # --- Step 1: Export ---
     print(f"\n{'='*60}")
@@ -66,14 +63,11 @@ def run(args):
         p = Path(t)
         if p.is_file() and p.suffix.lower() == ".pbl":
             print(f"  Exporting: {p}")
-            if use_orca:
-                exported_files.extend(_export_with_orca(p, str(output), args))
-            else:
-                with PBLParser(p) as parser:
-                    files = parser.export_to_directory(str(output))
-                    exported_files.extend(files)
-                    print(f"    -> {len(files)} objects")
-                    total_objects += len(files)
+            with PBLParser(p) as parser:
+                files = parser.export_to_directory(str(output))
+                exported_files.extend(files)
+                print(f"    -> {len(files)} objects")
+                total_objects += len(files)
         elif p.is_dir():
             print(f"  Batch exporting: {p}/*")
             exporter = PBLBatchExporter(p, str(output))
@@ -123,19 +117,6 @@ def run(args):
     else:
         print(f"  Changes:  (first snapshot or no diff)")
     print(f"{'='*60}")
-
-
-def _export_with_orca(pbl_path: Path, output_dir: str, args) -> list:
-    """Export using PBORCA DLL."""
-    from pb_devkit.pborca_engine import PBORCAEngine
-    engine = PBORCAEngine(pb_version=args.pb_version)
-    engine.session_open()
-    try:
-        exported = engine.export_all(str(pbl_path), output_dir,
-                                     headers=True)
-        return exported
-    finally:
-        engine.session_close()
 
 
 def _diff_against_previous(output: Path, snapshot_dir: Path,

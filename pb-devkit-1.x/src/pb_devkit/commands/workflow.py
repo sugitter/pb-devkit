@@ -75,21 +75,19 @@ def run(args):
     else:
         print(f"\n[3/4] Skipping refactoring (use --apply)")
 
-    # Step 4: Import (only with --apply and --import-pbl)
+    # Step 4: Pack back to PBL (only with --apply and --import-pbl)
     if args.apply and args.import_pbl:
-        print(f"\n[4/4] Importing back to PBL: {args.import_pbl}")
+        print(f"\n[4/4] Packing source back to PBL: {args.import_pbl}")
         try:
-            from pb_devkit.pborca_engine import PBORCAEngine
-            engine = PBORCAEngine(pb_version=args.pb_version)
-            engine.session_open()
-            imported = engine.import_from_directory(args.import_pbl, str(export_dir))
-            print(f"  Imported {len(imported)} objects")
-            engine.session_close()
-        except RuntimeError as e:
-            print(f"  Skipped (PBORCA DLL not available): {e}")
+            from pb_devkit.pbl_writer import pack_directory
+            count = pack_directory(str(export_dir), args.import_pbl)
+            print(f"  ✅ Packed {count} objects to {args.import_pbl}")
+        except Exception as e:
+            print(f"  [warn] Pack failed: {e}")
+            print(f"  Tip: use 'pb pack {export_dir} -o {args.import_pbl}' manually")
     else:
         if args.apply:
-            print(f"\n[4/4] Use --import-pbl <path> to write changes back")
+            print(f"\n[4/4] Use --import-pbl <path.pbl> to pack changes back to PBL")
 
     print(f"\n{'='*60}")
     print(f"  Workflow complete. Working directory: {work_dir.resolve()}")

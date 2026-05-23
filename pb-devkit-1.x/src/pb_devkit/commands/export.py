@@ -21,10 +21,8 @@ def register(sub: argparse.ArgumentParser) -> argparse.ArgumentParser:
     p.add_argument("target", nargs="+", help="PBL/PBD/EXE file or directory")
     p.add_argument("-o", "--output", default="./exported",
                    help="Output directory (default: ./exported)")
-    p.add_argument("--orca", action="store_true",
-                   help="Use PBORCA DLL for export (PBL only)")
     p.add_argument("--no-headers", action="store_true",
-                   help="Strip export header lines (--orca only)")
+                   help="Strip export header lines from output")
     p.add_argument("--by-type", action="store_true",
                    help="Organize files by object type "
                         "(window/, datawindow/, menu/, etc.)")
@@ -49,7 +47,6 @@ def run(args):
     targets = args.target
     output = args.output
     pbl_tree = args.pbl_tree
-    use_orca = args.orca
     by_type = args.by_type
     write_manifest = getattr(args, "manifest", False)
 
@@ -75,17 +72,14 @@ def run(args):
 
             if suffix_lower == ".pbl":
                 print(f"Exporting: {p}")
-                if use_orca:
-                    _export_with_orca(p, output, args)
-                else:
-                    from pb_devkit.pbl_parser import PBLParser
-                    with PBLParser(p) as parser:
-                        exported = parser.export_to_directory(
-                            output, by_type=by_type)
-                        for f in exported:
-                            print(f"  -> {f}")
-                        print(f"  Total: {len(exported)} objects")
-                        if write_manifest:
+                from pb_devkit.pbl_parser import PBLParser
+                with PBLParser(p) as parser:
+                    exported = parser.export_to_directory(
+                        output, by_type=by_type)
+                    for f in exported:
+                        print(f"  -> {f}")
+                    print(f"  Total: {len(exported)} objects")
+                    if write_manifest:
                             _write_manifest(
                                 output_dir=output,
                                 source_file=str(p),
@@ -187,19 +181,3 @@ def _write_manifest(
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
     print(f"[manifest] Written: {manifest_path}")
-
-
-def _export_with_orca(pbl_path: Path, output_dir: str, args):
-    """Export using PBORCA DLL for accurate results."""
-    from pb_devkit.pborca_engine import PBORCAEngine
-
-    engine = PBORCAEngine(pb_version=args.pb_version)
-    engine.session_open()
-    try:
-        exported = engine.export_all(str(pbl_path), output_dir,
-                                     headers=not args.no_headers)
-        for f in exported:
-            print(f"  -> {f}")
-        print(f"  Total: {len(exported)} objects (via ORCA)")
-    finally:
-        engine.session_close()

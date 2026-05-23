@@ -1,16 +1,19 @@
 """
 PBORCA SDK Python wrapper via ctypes.
 
-Wraps PBORCA C API (or PBSpyORCA replacement) for Python.
-Supports: export, import, compile, build.
+DEPRECATED / OPTIONAL MODULE
+================================
+As of pb-devkit 1.x v2.0:
+  - export  → pbl_parser.py  (pure Python, no DLL required)
+  - import  → pbl_writer.py  (pure Python, no DLL required)
+  - build   → PBGen.exe CLI   (PowerBuilder's own compiler)
 
-DLL: PBSpyORCA.dll (MIT, PB5-PB2025) -> tools/pb-devkit/orca/
-     Download: https://github.com/Hucxy/PBSpyORCA
+This module is kept for reference only and is no longer called
+by any core CLI command. It requires PBSpyORCA.dll or a system
+PBORCA DLL to function.
 
-This module supports graceful degradation when the DLL is not available:
-- is_available() checks without raising
-- PBORCAEngine raises RuntimeError with helpful messages
-- CLI commands that need ORCA show installation instructions
+If you need ORCA-based integration for advanced compilation scenarios,
+set PBORCA_PATH to your DLL directory before using this module.
 """
 from __future__ import annotations
 import ctypes

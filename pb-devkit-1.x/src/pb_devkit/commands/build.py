@@ -5,21 +5,17 @@ Three compilation modes:
   --mode exe+pbd    EXE + separate PBDs (faster startup, updatable components)
   --mode exe+dll    EXE + DLLs (PowerBuilder DLL libraries)
 
-PBD flags control which PBLs are compiled into EXE vs separate PBDs:
-  n = include in EXE (no separate PBD)
-  y = create separate PBD
-  d = create as DLL
+NOTE: This command requires an installed PowerBuilder IDE to compile.
+      The pb-devkit toolkit handles EXE→source→web migration without PB IDE.
+      To compile a PB application, use PowerBuilder's IDE or PBGen CLI tool.
 
 Usage:
-    python pb.py build <pbl> <app_name>
-    python pb.py build <pbl> <app_name> --mode exe --exe app.exe
-    python pb.py build <pbl> <app_name> --mode exe+pbd --exe app.exe --pbd-libs lib1.pbl,lib2.pbl
-    python pb.py build <pbl> <app_name> --mode exe+dll --exe app.exe --dll-libs lib1.pbl
-    python pb.py build <pbl> <app_name> --exe app.exe --lib-list a.pbl;b.pbl;c.pbl
+    pb build <pbl> <app_name>
+    pb build <pbl> <app_name> --mode exe --exe app.exe
+    pb build <pbl> <app_name> --mode exe+pbd --exe app.exe --pbd-libs lib1.pbl,lib2.pbl
 """
 import argparse
 import sys
-import time
 from pathlib import Path
 from typing import Optional
 
@@ -27,13 +23,15 @@ from typing import Optional
 def register(sub: argparse.ArgumentParser) -> argparse.ArgumentParser:
     p = sub.add_parser(
         "build",
-        help="Rebuild application (single EXE / EXE+PBD / EXE+DLL)",
+        help="Rebuild a PB application (requires PowerBuilder IDE installed)",
         description=(
             "Rebuild a PowerBuilder application.\n\n"
             "Three output modes:\n"
             "  exe      — Single standalone EXE (all code baked in)\n"
             "  exe+pbd  — EXE + separate PBD files (runtime-loadable components)\n"
-            "  exe+dll  — EXE + DLL files (PowerBuilder dynamic libraries)\n"
+            "  exe+dll  — EXE + DLL files (PowerBuilder dynamic libraries)\n\n"
+            "NOTE: Compilation requires PowerBuilder IDE. This command invokes\n"
+            "      the PBGen CLI that ships with PowerBuilder.\n"
         ),
     )
     p.add_argument("pbl", help="Application PBL file path")
@@ -44,12 +42,7 @@ def register(sub: argparse.ArgumentParser) -> argparse.ArgumentParser:
         "--mode",
         choices=["exe", "exe+pbd", "exe+dll"],
         default="exe",
-        help=(
-            "Compilation output mode:\n"
-            "  exe       — Single EXE (default)\n"
-            "  exe+pbd   — EXE + separate PBD files\n"
-            "  exe+dll   — EXE + DLL files"
-        ),
+        help="Compilation output mode (default: exe)",
     )
 
     # Output paths
@@ -62,18 +55,15 @@ def register(sub: argparse.ArgumentParser) -> argparse.ArgumentParser:
         "--output-dir", "-d",
         default=None,
         metavar="DIR",
-        help="Output directory for EXE + PBD/DLL files (default: PBL directory)",
+        help="Output directory for EXE + PBD/DLL files",
     )
 
-    # Library list (semicolon-separated, for multi-PBL projects)
+    # Library list
     p.add_argument(
         "--lib-list",
         default=None,
         metavar="PBL1;PBL2;...",
-        help=(
-            "Semicolon-separated library list (all PBLs in the project). "
-            "If not specified, only the main PBL is used."
-        ),
+        help="Semicolon-separated library list (all PBLs in the project).",
     )
 
     # PBD/DLL library selection
@@ -81,19 +71,13 @@ def register(sub: argparse.ArgumentParser) -> argparse.ArgumentParser:
         "--pbd-libs",
         default=None,
         metavar="PBL1,PBL2,...",
-        help=(
-            "Comma-separated PBL names that should become separate PBD files "
-            "(for --mode exe+pbd). Others are baked into the EXE."
-        ),
+        help="Comma-separated PBL names that should become separate PBD files.",
     )
     p.add_argument(
         "--dll-libs",
         default=None,
         metavar="PBL1,PBL2,...",
-        help=(
-            "Comma-separated PBL names that should become DLL files "
-            "(for --mode exe+dll). Others are baked into the EXE."
-        ),
+        help="Comma-separated PBL names that should become DLL files.",
     )
 
     # Build options
@@ -118,13 +102,20 @@ def register(sub: argparse.ArgumentParser) -> argparse.ArgumentParser:
         action="store_true",
         help="Rebuild PBL only (don't create EXE)",
     )
+    p.add_argument(
+        "--pbgen",
+        default=None,
+        metavar="PATH",
+        help="Path to PBGen.exe (PowerBuilder CLI compiler). Auto-detected if not set.",
+    )
 
     return p
 
 
 def run(args):
-    """Build application with specified output mode."""
-    from pb_devkit.pborca_engine import PBORCAEngine
+    """Build application using PowerBuilder's PBGen CLI compiler."""
+    import subprocess
+    import shutil
 
     pbl_path = Path(args.pbl).resolve()
     if not pbl_path.exists():
@@ -143,11 +134,8 @@ def run(args):
         else:
             exe_path = out_dir / f"{args.app_name}.exe"
 
-    # Parse library list
-    lib_list = _parse_lib_list(args.lib_list, pbl_path)
-
-    # Build PBD flags based on mode
-    pbd_flags = _compute_pbd_flags(args.mode, lib_list, args)
+    # Locate PBGen.exe
+    pbgen = _find_pbgen(args.pbgen)
 
     print(f"\n{'='*60}")
     print(f"  pb build — PowerBuilder Compiler")
@@ -158,87 +146,109 @@ def run(args):
     print(f"  Output:   {out_dir}")
     if exe_path:
         print(f"  EXE:      {exe_path.name}")
-    if args.machine_code:
-        print(f"  Compile:  Machine Code")
-    print()
 
-    engine = PBORCAEngine(pb_version=getattr(args, "pb_version", None) or 125)
-    engine.session_open()
+    if not pbgen:
+        print(
+            f"\n[error] PowerBuilder PBGen.exe not found.\n"
+            f"  Install PowerBuilder, then either:\n"
+            f"  1. Add PBGen.exe to your PATH, or\n"
+            f"  2. Use --pbgen <path_to_PBGen.exe>\n\n"
+            f"  Typical locations:\n"
+            f"    C:\\Program Files\\Appeon\\PowerBuilder xx.x\\PBGen.exe\n"
+            f"\n"
+            f"  For EXE analysis (no IDE needed), use:\n"
+            f"    pb export <your.exe> --pbl-tree\n"
+            f"    pb migrate <your.exe> -o ./web-output\n",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # Parse library list
+    lib_list = _parse_lib_list(args.lib_list, pbl_path)
+    lib_list_str = ";".join(str(p) for p in lib_list)
+
+    # Build PBD flags
+    pbd_flags = _compute_pbd_flags(args.mode, lib_list, args)
+
+    # Build PBGen command
+    # PBGen syntax: PBGen.exe -l <liblist> -a <appname> -e <exepath> -p <pbdflags>
+    cmd = [
+        str(pbgen),
+        "-l", lib_list_str,
+        "-a", args.app_name,
+    ]
+    if exe_path and not args.rebuild_only:
+        cmd += ["-e", str(exe_path)]
+    if args.icon:
+        cmd += ["-i", args.icon]
+    if args.pbr:
+        cmd += ["-r", args.pbr]
+    if args.machine_code:
+        cmd += ["-m"]
+    if pbd_flags and args.mode != "exe":
+        cmd += ["-p", pbd_flags]
+
+    print(f"\n  Command: {' '.join(cmd)}\n")
 
     try:
-        # Step 1: Set library list
-        if len(lib_list) > 1:
-            lib_list_str = ";".join(str(p) for p in lib_list)
-            print(f"[1/3] Setting library list ({len(lib_list)} PBLs)...")
-            engine._dll.PBORCA_SessionSetLibraryList(
-                engine._session, lib_list_str.encode("ascii"))
-        else:
-            lib_list_str = str(pbl_path)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        if result.stdout:
+            print(result.stdout)
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        if result.returncode != 0:
+            print(f"\n[error] PBGen exited with code {result.returncode}", file=sys.stderr)
+            sys.exit(result.returncode)
+    except FileNotFoundError:
+        print(f"[error] Cannot execute: {pbgen}", file=sys.stderr)
+        sys.exit(1)
+    except subprocess.TimeoutExpired:
+        print(f"[error] Build timed out after 300s", file=sys.stderr)
+        sys.exit(1)
 
-        # Step 2: Set current application
-        print(f"[1/3] Setting current application: {args.app_name}")
-        engine._setup()
-        engine._dll.PBORCA_SessionSetLibraryList(
-            engine._session, lib_list_str.encode("ascii"))
-        engine._dll.PBORCA_SessionSetCurrentAppl(
-            engine._session,
-            str(pbl_path).encode("ascii"),
-            args.app_name.encode("ascii"))
-
-        # Step 3: Rebuild
-        print(f"[2/3] Rebuilding application...")
-        t0 = time.time()
-        engine._check(
-            engine._dll.PBORCA_ApplicationRebuild(engine._session),
-            "ApplicationRebuild"
-        )
-        elapsed = time.time() - t0
-        print(f"  ✅ Rebuild complete ({elapsed:.1f}s)")
-
-        # Step 4: Create executable (if requested)
-        if exe_path and not args.rebuild_only:
-            print(f"\n[3/3] Creating executable ({args.mode})...")
-            print(f"  PBD flags: '{pbd_flags}' ({len(pbd_flags)} PBLs)")
-
-            t0 = time.time()
-            engine._check(
-                engine._dll.PBORCA_ExecutableCreate(
-                    engine._session,
-                    str(exe_path).encode("ascii"),
-                    (args.icon or "").encode("ascii"),
-                    (args.pbr or "").encode("ascii"),
-                    pbd_flags.encode("ascii"),
-                    1 if args.machine_code else 0,
-                ),
-                "ExecutableCreate"
-            )
-            elapsed = time.time() - t0
-            exe_size = exe_path.stat().st_size // 1024 if exe_path.exists() else 0
-            print(f"  ✅ EXE created: {exe_path} ({exe_size} KB, {elapsed:.1f}s)")
-
-            # Report PBD/DLL files created alongside
-            if args.mode in ("exe+pbd", "exe+dll"):
-                ext = ".pbd" if args.mode == "exe+pbd" else ".dll"
-                created = list(out_dir.glob(f"*{ext}"))
-                if created:
-                    print(f"\n  Side files ({ext}):")
-                    for f in sorted(created):
-                        size = f.stat().st_size // 1024
-                        print(f"    {f.name} ({size} KB)")
-
-    finally:
-        engine.session_close()
+    if exe_path and exe_path.exists():
+        size = exe_path.stat().st_size // 1024
+        print(f"\n  ✅ EXE created: {exe_path} ({size} KB)")
 
     print(f"\n{'='*60}")
     print(f"  Build complete — mode: {args.mode}")
-    if exe_path and exe_path.exists():
-        print(f"  Output: {exe_path}")
     print(f"{'='*60}")
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _find_pbgen(explicit_path: Optional[str]) -> Optional[Path]:
+    """Locate PBGen.exe from explicit path, PATH, or common install dirs."""
+    import shutil
+
+    if explicit_path:
+        p = Path(explicit_path)
+        return p if p.exists() else None
+
+    # Check PATH
+    found = shutil.which("PBGen.exe") or shutil.which("PBGen")
+    if found:
+        return Path(found)
+
+    # Common install locations
+    candidates = []
+    for base in [
+        r"C:\Program Files\Appeon",
+        r"C:\Program Files (x86)\Appeon",
+        r"C:\Program Files\Sybase",
+        r"C:\Program Files (x86)\Sybase",
+    ]:
+        base_p = Path(base)
+        if base_p.exists():
+            for sub in base_p.iterdir():
+                g = sub / "PBGen.exe"
+                if g.exists():
+                    candidates.append(g)
+
+    return candidates[0] if candidates else None
+
 
 def _parse_lib_list(lib_list_str: Optional[str], main_pbl: Path):
     """Parse semicolon-separated library list into Path objects."""
@@ -257,49 +267,39 @@ def _parse_lib_list(lib_list_str: Optional[str], main_pbl: Path):
 
 def _compute_pbd_flags(mode: str, lib_list: list, args) -> str:
     """
-    Compute PBD flags string for PBORCA_ExecutableCreate.
+    Compute PBD flags string for PBGen -p option.
 
     Flag meaning per library slot:
       'n' = no PBD (compile into EXE)
-      'y' = create PBD file (separate runtime file)
+      'y' = create PBD file
       'd' = create DLL file
-
-    The flags string length = number of libraries in the library list.
-    The first library (app PBL) is always 'n' (baked into EXE).
     """
     if mode == "exe":
-        # All libraries baked into EXE
         return "n" * len(lib_list)
 
     if mode == "exe+pbd":
-        # Determine which PBLs become separate PBDs
         pbd_lib_names = set()
         if args.pbd_libs:
             for name in args.pbd_libs.split(","):
                 pbd_lib_names.add(name.strip().lower().removesuffix(".pbl"))
-
         flags = []
         for i, lib in enumerate(lib_list):
             lib_stem = lib.stem.lower()
             if i == 0:
-                # App PBL is always in EXE
                 flags.append("n")
             elif pbd_lib_names and lib_stem in pbd_lib_names:
                 flags.append("y")
             elif not pbd_lib_names:
-                # If no explicit list: make all non-app PBLs into PBDs
                 flags.append("y")
             else:
                 flags.append("n")
         return "".join(flags)
 
     if mode == "exe+dll":
-        # Determine which PBLs become DLLs
         dll_lib_names = set()
         if args.dll_libs:
             for name in args.dll_libs.split(","):
                 dll_lib_names.add(name.strip().lower().removesuffix(".pbl"))
-
         flags = []
         for i, lib in enumerate(lib_list):
             lib_stem = lib.stem.lower()

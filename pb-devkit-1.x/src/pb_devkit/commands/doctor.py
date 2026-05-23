@@ -1,4 +1,4 @@
-"""pb doctor command - Environment diagnostics."""
+"""pb doctor command - Environment diagnostics (pure Python, no DLL required)."""
 import argparse
 import json
 import os
@@ -45,18 +45,7 @@ def run(args):
     print(f"  [OK]   Tool dir: {tool_dir}")
     ok_count += 1
 
-    # 5. ORCA DLL
-    from pb_devkit.pborca_engine import is_available, get_dll_info
-    dll_info = get_dll_info()
-    dll_found = dll_info["available"]
-    if dll_found:
-        print(f"  [OK]   ORCA DLL: {dll_info['path']}")
-        ok_count += 1
-    else:
-        print(f"  [INFO] ORCA DLL: not found (export/list/analyze work without it)")
-        print(f"         Download: https://github.com/Hucxy/PBSpyORCA/releases")
-
-    # 6. Check if target project exists
+    # 5. Check if target project exists
     target = getattr(args, "target", None)
     pbls = []
     sr_files = []
@@ -85,31 +74,24 @@ def run(args):
             print(f"\n  [FAIL] Project path does not exist: {target}")
             issues.append(f"Project path not found: {target}")
 
-    # 7. Module import test
+    # 6. Module import tests
     print(f"\n  Checking modules...")
-    try:
-        from pb_devkit.pbl_parser import PBLParser
-        print(f"  [OK]   pbl_parser")
-        ok_count += 1
-    except ImportError as e:
-        print(f"  [FAIL] pbl_parser: {e}")
-        issues.append(f"pbl_parser import failed: {e}")
-
-    try:
-        from pb_devkit.sr_parser import PBSourceAnalyzer
-        print(f"  [OK]   sr_parser")
-        ok_count += 1
-    except ImportError as e:
-        print(f"  [FAIL] sr_parser: {e}")
-        issues.append(f"sr_parser import failed: {e}")
-
-    try:
-        from pb_devkit.refactoring import RefactoringEngine
-        print(f"  [OK]   refactoring")
-        ok_count += 1
-    except ImportError as e:
-        print(f"  [FAIL] refactoring: {e}")
-        issues.append(f"refactoring import failed: {e}")
+    for mod_name, import_path in [
+        ("pbl_parser", "pb_devkit.pbl_parser.PBLParser"),
+        ("pbl_writer", "pb_devkit.pbl_writer.PblWriter"),
+        ("sr_parser", "pb_devkit.sr_parser.PBSourceAnalyzer"),
+        ("refactoring", "pb_devkit.refactoring.RefactoringEngine"),
+        ("chunk_engine", "pb_devkit.chunk_engine.ChunkEngine"),
+    ]:
+        module_path, class_name = import_path.rsplit(".", 1)
+        try:
+            mod = __import__(module_path, fromlist=[class_name])
+            getattr(mod, class_name)
+            print(f"  [OK]   {mod_name}")
+            ok_count += 1
+        except (ImportError, AttributeError) as e:
+            print(f"  [FAIL] {mod_name}: {e}")
+            issues.append(f"{mod_name} import failed: {e}")
 
     # Summary
     print(f"\n{'='*60}")
@@ -118,7 +100,7 @@ def run(args):
         for iss in issues:
             print(f"    - {iss}")
     else:
-        print(f"  All checks passed!")
+        print(f"  All checks passed! (no external DLLs required)")
     print(f"{'='*60}")
 
     if args.json:
@@ -126,13 +108,13 @@ def run(args):
             "python_version": py_ver,
             "platform": f"{platform.system()} {platform.release()}",
             "tool_dir": str(tool_dir),
-            "orca_dll": dll_found,
+            "dll_required": False,
             "modules_ok": ok_count >= 6,
             "issues": issues,
         }
         if target:
-            result["project_exists"] = target_path.exists()
-            if target_path.exists():
+            result["project_exists"] = target_path.exists() if target_path else False
+            if target_path and target_path.exists():
                 result["pbl_count"] = len(pbls)
                 result["total_pbl_size_mb"] = round(total_size / 1024 / 1024, 1)
         print(json.dumps(result, indent=2, ensure_ascii=False))

@@ -71,13 +71,13 @@ def run(args):
             rel = pbl.relative_to(project_dir)
             print(f"\n  {rel} ({size_mb:.1f} MB) [parse skipped: {e}]")
             modules[str(rel)] = {
-                "path": str(rel),
-                "absolute_path": str(pbl),
-                "size_mb": round(size_mb, 2),
-                "object_count": 0,
-                "parse_error": str(e),
-                "note": "PB12+ format may need PBSpyORCA.dll for parsing",
-            }
+                    "path": str(rel),
+                    "absolute_path": str(pbl),
+                    "size_mb": round(size_mb, 2),
+                    "object_count": 0,
+                    "parse_error": str(e),
+                    "note": "PBL parse failed (may be PB5-PB6 era or corrupted)",
+                }
 
     # Check for application file (.pbt / .pbw)
     app_files = list(project_dir.glob("*.pbt"))
@@ -99,17 +99,12 @@ def run(args):
     total_size = sum(p.stat().st_size for p in pbls)
     print(f"\n  Total PBL size:   {total_size / 1024 / 1024:.1f} MB")
     if total_objects == 0 and len(pbls) > 0:
-        print(f"  Note: Objects could not be counted (PB12+ format).")
-        print(f"        Download PBSpyORCA.dll for full support:")
-        print(f"        https://github.com/Hucxy/PBSpyORCA/releases")
+        print(f"  Note: Objects could not be parsed. Try 'pb export --pbl-tree' for EXE files.")
 
     print(f"\n  Next steps:")
-    print(f"    1. Export all sources:  python pb.py export {project_dir} ./exported")
-    print(f"    2. Analyze quality:     python pb.py analyze-project ./exported --json")
-    if total_objects == 0:
-        print(f"\n  Or with ORCA DLL:")
-        print(f"    1. python pb.py --orca export {project_dir} ./exported")
-        print(f"    2. python pb.py analyze-project ./exported --json")
+    print(f"    1. Export all sources:  pb export {project_dir} ./exported")
+    print(f"    2. Analyze quality:     pb analyze-project ./exported --json")
+    print(f"    3. Migrate to web:      pb migrate {project_dir} -o ./web-output")
 
     if args.json:
         result = {

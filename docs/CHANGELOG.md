@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.6.0] - 2026-05-23
+
+### Added
+- **`pb pack`**: New command — write `.sr*` source files back to PBL binary (pure Python, zero DLL)
+- **`pbl_writer.py`**: PBL binary writer supporting Unicode (UTF-16LE) and ANSI formats; 512B block alignment; HDR\*/FRE\*/NOD\*/DAT\* layout
+- **`pb migrate`**: Enhanced — DataWindow SQL → TypeScript interface + Reactive Form factory; Window events → method stubs; generates `MIGRATION.md` with effort estimates
+- **`pb export --manifest`**: Generates `export-manifest.json` with object catalog, PBL grouping, and timestamps
+- Round-trip validation: EXE → export → pack → rebuilt PBL verified identical by ChunkEngine
+
+### Changed
+- **Zero-DLL Architecture**: `import`, `compile` rewritten to use `pbl_writer` (no ORCA/DLL)
+- **`pb build`**: Rewritten to call `PBGen.exe` (PB IDE CLI tool) via subprocess; auto-detects installation path; supports `--pbgen` override
+- **`pb workflow`**: Step 4 now calls `pb pack` instead of ORCA
+- **`pb doctor`**: Removed ORCA DLL check; now checks Python + pbl_parser + pbl_writer
+- **`pb init`**: Removed PBSpyORCA.dll reference from setup hints
+- **`pb list`, `pb snapshot`, `pb export`**: Removed `--orca` options
+- **`pborca_engine.py`**: Marked DEPRECATED; no longer called by any core CLI command
+
+### Fixed
+- ENT\* `name_buf` format: correctly writes `name_bytes + ver_suffix(2B)` — not as prefix; fixes name corruption in round-trip validation
+
+---
+
 ## [2.0.0] - 2026-05-16
 
 > **Major Release**: Complete rewrite in Rust for better performance

@@ -47,23 +47,9 @@ pb --version
 python pb.py --help
 ```
 
-**环境要求**: Python 3.9+，无任何外部依赖。
+**环境要求**: Python 3.9+，无任何外部依赖（无需 DLL）。
 
-### 1.2 PBORCA DLL（可选，用于导入/编译）
-
-```bash
-# 下载 PBSpyORCA（MIT 协议，支持 PB5-PB2025）
-# https://github.com/Hucxy/PBSpyORCA/releases
-# 下载后放入 orca/ 目录：
-copy PBSpy.dll orca\PBSpy.dll
-
-# 验证
-pb doctor
-```
-
-> 不安装 DLL 也能使用 export/analyze/search/refactor/report/stats/snapshot/diff 等核心功能。只有 import/build/compile 需要 DLL。
-
-### 1.3 VS Code 插件
+### 1.2 VS Code 插件
 
 ```bash
 cd vscode-extension
@@ -102,31 +88,33 @@ gradlew runIde
 pb <command> [arguments] [options]
 ```
 
-| 命令 | 说明 | 需要 ORCA |
-|------|------|:---:|
-| `pb doctor [dir]` | 环境诊断（Python/DLL/模块） | 否 |
-| `pb init <dir>` | 初始化项目（识别 PB 项目结构） | 否 |
-| `pb list <pbl_or_dir>` | 列出 PBL 中的对象 | 可选 |
-| `pb export <pbl_or_dir> [out]` | 导出 PBL 源码为 .sr* 文件 | 可选 |
-| `pb analyze <dir>` | 代码质量分析 | 否 |
-| `pb analyze-project <dir>` | 完整项目分析（依赖图+复杂度） | 否 |
-| `pb search <pattern> <dir>` | 全文搜索（文本/SQL/函数） | 否 |
-| `pb stats <dir>` | 项目统计仪表盘 | 否 |
-| `pb report <dir>` | 生成 Markdown 分析报告 | 否 |
-| `pb refactor <dir>` | 自动重构（支持 dry-run） | 否 |
-| `pb diff <dir1> <dir2>` | 比较两份源码 | 否 |
-| `pb snapshot <pbl> [out]` | 版本快照（导出+对比+git） | 可选 |
-| `pb workflow <pbl> [dir]` | 全流程：导出→分析→重构 | 否 |
-| `pb import <pbl> <dir>` | 导入 .sr* 文件到 PBL | 是 |
-| `pb build <pbl> <app>` | 全量重建应用 | 是 |
-| `pb compile <pbl> <dir>` | 导入+重建一步完成 | 是 |
+| 命令 | 说明 |
+|------|------|
+| `pb doctor [dir]` | 环境诊断（Python/模块） |
+| `pb init <dir>` | 初始化项目（识别 PB 项目结构） |
+| `pb list <pbl_or_dir>` | 列出 PBL 中的对象 |
+| `pb export <pbl_or_dir> [out]` | 导出 PBL 源码为 .sr* 文件 |
+| `pb pack <dir> [out.pbl]` | 将 .sr* 文件打包回 PBL 二进制 |
+| `pb analyze <dir>` | 代码质量分析 |
+| `pb analyze-project <dir>` | 完整项目分析（依赖图+复杂度） |
+| `pb search <pattern> <dir>` | 全文搜索（文本/SQL/函数） |
+| `pb stats <dir>` | 项目统计仪表盘 |
+| `pb report <dir>` | 生成 Markdown 分析报告 |
+| `pb refactor <dir>` | 自动重构（支持 dry-run） |
+| `pb diff <dir1> <dir2>` | 比较两份源码 |
+| `pb snapshot <pbl> [out]` | 版本快照（导出+对比+git） |
+| `pb workflow <pbl> [dir]` | 全流程：导出→分析→重构→打包 |
+| `pb migrate <pbl_or_dir> [out]` | 迁移：DW/事件 → Angular TypeScript 脚手架 |
+| `pb import <pbl> <dir>` | 导入 .sr* 文件到 PBL（纯 Python，无需 DLL） |
+| `pb build <pbl> <app>` | 全量重建应用（需 PBGen.exe） |
+| `pb compile <pbl> <dir>` | 导入+重建一步完成（需 PBGen.exe） |
 
 所有命令支持 `--json` 输出 JSON，`--verbose` / `-v` 显示详情。
 
 ### 2.2 环境诊断
 
 ```bash
-# 检查 Python 环境、模块加载、ORCA DLL
+# 检查 Python 环境、模块加载
 pb doctor
 
 # 检查指定项目
@@ -137,9 +125,8 @@ pb doctor F:\workspace\X6\3.5
 ```
 ✓ Python 3.12.0
 ✓ pb_devkit 模块加载正常
-✗ PBORCA DLL 未找到 (orca/PBSpy.dll)
-  → import/build/compile 命令不可用
-  → 下载: https://github.com/Hucxy/PBSpyORCA/releases
+✓ pbl_parser 就绪
+✓ pbl_writer 就绪（pb pack/import 可用）
 
 项目检查: F:\workspace\X6\3.5
   ✓ 找到 12 个 PBL 文件
@@ -170,9 +157,27 @@ pb export dgsauna.pbl ./src --orca
 
 # 去掉 $PBExportHeader$ 行
 pb export dgsauna.pbl ./src --no-headers
+
+# 同时生成 export-manifest.json（对象清单）
+pb export dgsauna.pbl ./src --manifest
 ```
 
-### 2.5 列出对象
+### 2.5 打包回 PBL（pb pack）
+
+```bash
+# 将 ./src/ 目录下的 .sr* 文件打包为 PBL
+pb pack ./src dgsauna.pbl
+
+# 批量打包树形结构（每个子目录 → 独立 PBL）
+pb pack ./src --all
+
+# 覆盖已有文件
+pb pack ./src dgsauna.pbl --force
+```
+
+> 纯 Python 实现，无需任何 DLL，支持 Unicode 和 ANSI 两种格式。
+
+### 2.6 列出对象
 
 ```bash
 # 列出 PBL 中所有对象
@@ -185,7 +190,7 @@ pb list F:\workspace\X6\3.5
 pb list dgsauna.pbl --json
 ```
 
-### 2.6 代码分析
+### 2.7 代码分析
 
 ```bash
 # 分析指定目录下的 .sr* 文件
@@ -201,7 +206,7 @@ pb analyze ./src --json
 pb analyze-project ./src --json
 ```
 
-### 2.7 全文搜索
+### 2.8 全文搜索
 
 ```bash
 # 文本搜索（默认）
@@ -220,7 +225,7 @@ pb search "open" ./src -t WIN
 pb search "SQLCA" ./src --case-sensitive
 ```
 
-### 2.8 项目统计
+### 2.9 项目统计
 
 ```bash
 pb stats ./src
@@ -256,7 +261,7 @@ pb stats ./src --json
     F (31+)         13 (0.7%)
 ```
 
-### 2.9 代码重构
+### 2.10 代码重构
 
 ```bash
 # 预览模式（只看不改）
@@ -272,7 +277,7 @@ pb refactor ./src --apply
 pb refactor ./src --apply --rules fix_empty_catch,fix_deprecated
 ```
 
-### 2.10 差异对比
+### 2.11 差异对比
 
 ```bash
 # 对比两个导出目录
@@ -285,7 +290,7 @@ pb diff ./src-v1 ./src-v2 -v
 pb diff ./src-v1 ./src-v2 --json
 ```
 
-### 2.11 生成报告
+### 2.12 生成报告
 
 ```bash
 # 生成 Markdown 分析报告
@@ -298,7 +303,7 @@ pb report ./src -o ./CODE_REVIEW.md
 pb report ./src --json
 ```
 
-### 2.12 一键全流程
+### 2.13 一键全流程
 
 ```bash
 # 导出 → 分析 → 重构（预览）
@@ -308,18 +313,35 @@ pb workflow dgsauna.pbl
 pb workflow dgsauna.pbl --apply
 ```
 
-### 2.13 导入和编译（需要 ORCA DLL）
+### 2.14 迁移到现代框架（pb migrate）
 
 ```bash
-# 导入 .sr* 文件到 PBL
+# 分析 PBL/EXE，生成 Angular 18 脚手架
+pb migrate dgsauna.pbl ./angular-app
+
+# 递归迁移整个项目目录
+pb migrate F:\workspace\X6\3.5 ./angular-app
+```
+
+生成内容包括：
+- DataWindow SQL → TypeScript interface + Reactive Form factory
+- Window 事件 → 方法 stub（含注释）
+- `MIGRATION.md`：工作量估算 + 分阶段优先级
+
+### 2.15 导入和编译
+
+```bash
+# 导入 .sr* 文件到 PBL（纯 Python，无需 DLL）
 pb import dgsauna.pbl ./src
 
-# 全量构建 EXE
+# 全量构建 EXE（需要 PBGen.exe，即 PB IDE 自带工具）
 pb build dgsauna.pbl dgsauna --exe dgsauna.exe
 
 # 一步完成导入+编译
 pb compile dgsauna.pbl ./src
 ```
+
+> `pb build` 调用 PBGen.exe（PB IDE 自带的命令行编译器）。如果未安装 PB IDE，可使用 `--pbgen` 指定路径：`pb build ... --pbgen "C:\PB12\bin\PBGen.exe"`
 
 ---
 
@@ -360,9 +382,6 @@ pb snapshot dgsauna.pbl ./src -v
 
 # JSON 格式输出差异报告
 pb snapshot dgsauna.pbl ./src --json
-
-# 使用 ORCA 导出
-pb snapshot dgsauna.pbl ./src --orca
 
 # 自定义快照元数据目录
 pb snapshot dgsauna.pbl ./src --snapshot-dir .pb-history
@@ -491,7 +510,7 @@ pb snapshot F:\workspace\X6\3.5 ./src
 # 第五步：再次快照（对比 + 提交）
 pb snapshot F:\workspace\X6\3.5 ./src
 
-# 第六步：最终编译（需要 ORCA DLL）
+# 第六步：最终编译（需要 PBGen.exe，即 PB IDE 自带工具）
 pb compile dgsauna.pbl ./src
 ```
 
@@ -506,23 +525,24 @@ pb compile dgsauna.pbl ./src
   ⑥ pb compile        编译最终可执行文件
 ```
 
-### 5.3 纯文本工作流（不依赖 PB IDE）
+### 5.3 完整现代化管道（零 DLL）
 
 ```
-PBL (二进制)                    现代开发环境
-    │                              │
-    ├─ pb export ──→ .sr* 文本 ──→ VS Code / IDEA
-    │                              │
-    │                    git diff / blame / merge
-    │                    AI Copilot / Continue
-    │                    全局搜索 / 批量替换
-    │                              │
-    └─ pb import ←── .sr* 文本 ←──┘
-         │
-         └─ pb build → .exe
+EXE/PBL ──pb export──► .sr* 源码 ──► VS Code / IDEA 编辑
+                                         │
+                                    git diff/blame/merge
+                                    AI Copilot/Continue
+                                         │
+        pb pack ◄── .sr* 源码 ◄──────────┘
+           │
+           └─► 重建的 .pbl
+                   │
+               pb build (PBGen.exe) ──► .exe
+
+        pb migrate ──► Angular TypeScript 脚手架 ──► 现代 Web 项目
 ```
 
-**核心理念：PBL 只是编译产物，.sr* 文本才是源码真相。**
+**核心理念：PBL 只是编译产物，.sr* 文本才是源码真相。整个流程无需任何 DLL。**
 
 推荐的项目结构：
 
@@ -612,7 +632,7 @@ CLI 和 VS Code 插件共用同一份配置。
 
 ### Q: PB12+ 的 PBL 解析失败？
 
-PB11+ 使用 1024 字节头（vs 旧版 512 字节），pb-devkit 已自动适配。如果仍失败，尝试 `--orca` 参数使用 ORCA DLL 导出。
+PB11+ 使用 1024 字节头（vs 旧版 512 字节），pb-devkit 已自动适配。如果仍失败，请提 Issue 并附上 PBL 版本信息。
 
 ### Q: git diff 中文乱码？
 
@@ -635,7 +655,7 @@ git config --global gui.encoding utf-8
 
 ### Q: 能处理 PB2025 吗？
 
-纯 Python 解析器支持 PB4-PB12+。PB2025 如需完整支持，建议使用 ORCA DLL（PBSpyORCA 支持 PB5-PB2025）。
+纯 Python 解析器支持 PB4-PB12+。PB2025 格式如有差异，欢迎提 Issue 反馈。
 
 ---
 
@@ -643,7 +663,7 @@ git config --global gui.encoding utf-8
 
 ```
 pb-devkit/
-├── pb.py                          # CLI 入口（16 个命令）
+├── pb.py                          # CLI 入口（17 个命令）
 ├── pyproject.toml                 # 包元数据
 ├── README.md                      # 项目介绍
 ├── USAGE.md                       # ← 本文件
@@ -651,15 +671,18 @@ pb-devkit/
 ├── LICENSE                        # MIT License
 ├── src/pb_devkit/
 │   ├── cli.py                     # pip install 后的入口
-│   ├── commands/                  # 16 个命令模块
+│   ├── commands/                  # 17 个命令模块
 │   │   ├── snapshot.py            # ← 版本快照
-│   │   ├── export.py              # ← 导出
+│   │   ├── export.py              # ← 导出（含 --manifest）
+│   │   ├── pack.py                # ← 打包回 PBL（new）
+│   │   ├── migrate.py             # ← 迁移 Angular 脚手架（new）
 │   │   ├── diff.py                # ← 差异对比
 │   │   ├── ...                    # ← 其他命令
 │   │   └── __init__.py
-│   ├── pbl_parser.py              # PBL 二进制解析器
+│   ├── pbl_parser.py              # PBL 二进制解析器（只读）
+│   ├── pbl_writer.py              # PBL 二进制写入器（纯Python，new）
 │   ├── sr_parser.py               # .sr* 源码解析 + 分析
-│   ├── pborca_engine.py           # PBORCA DLL 封装
+│   ├── pborca_engine.py           # DEPRECATED — 不再被核心命令调用
 │   ├── refactoring.py             # 自动重构引擎
 │   ├── config.py                  # 项目配置
 │   └── __init__.py
@@ -682,9 +705,8 @@ pb-devkit/
 │   │       ├── inspections/       # 10 条 Lint
 │   │       └── actions/           # Tools Menu
 │   └── README.md
-├── orca/                          # PBSpyORCA.dll（需手动下载）
 ├── tests/
-│   └── test_pb_devkit.py          # 44 个单元测试
+│   └── test_pb_devkit.py          # 68 个单元测试
 └── .gitignore
 ```
 

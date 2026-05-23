@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 - **`pb migrate`**: Enhanced — DataWindow SQL → TypeScript interface + Reactive Form factory; Window events → method stubs; generates `MIGRATION.md` with effort estimates
 - **`pb export --manifest`**: Generates `export-manifest.json` with object catalog, PBL grouping, and timestamps
 - Round-trip validation: EXE → export → pack → rebuilt PBL verified identical by ChunkEngine
+- **`pb autoexport`**: Smart auto-detect project type + full batch export to structured src/ (was written but unregistered)
+- **`pb dw`**: DataWindow deep analyzer — SQL/table schema/params/HTML report (was written but unregistered)
+- **`pb review`**: Comprehensive project review — structure/quality/DW/deps/suggestions in Markdown or HTML (was written but unregistered)
+- **CLI completion**: All 22 commands now registered in both entry points (`pb.py` + `cli.py`); version bumped to 1.6.0
 
 ### Changed
 - **Zero-DLL Architecture**: `import`, `compile` rewritten to use `pbl_writer` (no ORCA/DLL)

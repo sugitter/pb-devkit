@@ -25,6 +25,8 @@ Commands:
   pb autoexport <dir>                   Smart auto-detect + full export to src/
   pb review <dir>                       Comprehensive project review report (structure/quality/DW)
   pb dw <dir>                           DataWindow analyzer: SQL, tables, schema
+  pb migrate <pbl_or_dir> [output_dir]  Migrate PB → Angular TypeScript scaffold
+  pb pack <dir> [output.pbl]            Pack .sr* source files back to PBL binary
 """
 import argparse
 import logging
@@ -46,9 +48,9 @@ def _build_parser() -> argparse.ArgumentParser:
     """Build CLI argument parser with all subcommands."""
     parser = argparse.ArgumentParser(
         prog="pb",
-        description="PB DevKit - PowerBuilder Developer Toolkit v1.2.0")
+        description="PB DevKit - PowerBuilder Developer Toolkit v1.6.0")
     parser.add_argument(
-        "--version", action="version", version="PB DevKit 1.2.0")
+        "--version", action="version", version="PB DevKit 1.6.0 (zero-DLL)")
     parser.add_argument(
         "--pb-version", type=int, default=None,
         help="PowerBuilder version (default: 125 = PB 12.5, "
@@ -73,6 +75,7 @@ def _build_parser() -> argparse.ArgumentParser:
         run_report, run_refactor, run_diff, run_workflow,
         run_stats, run_snapshot, run_decompile,
         run_autoexport, run_review, run_dw,
+        run_migrate, run_pack,
     )
 
     # Import command modules to trigger register() calls
@@ -81,7 +84,7 @@ def _build_parser() -> argparse.ArgumentParser:
         doctor, init, list as list_mod, export, import_,
         build, compile as compile_mod, analyze, analyze_project,
         search, report, refactor, diff, workflow, stats, snapshot,
-        decompile, autoexport, review, dw,
+        decompile, autoexport, review, dw, migrate, pack,
     )
 
     doctor.register(sub)
@@ -104,6 +107,8 @@ def _build_parser() -> argparse.ArgumentParser:
     autoexport.register(sub)
     review.register(sub)
     dw.register(sub)
+    migrate.register(sub)
+    pack.register(sub)
 
     return parser
 
@@ -130,6 +135,8 @@ _COMMAND_MAP = {
     "autoexport": "run_autoexport",
     "review": "run_review",
     "dw": "run_dw",
+    "migrate": "run_migrate",
+    "pack": "run_pack",
 }
 
 

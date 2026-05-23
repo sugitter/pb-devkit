@@ -8,7 +8,7 @@ analysis and generates a structured report:
   3. Dependency graph summary (cross-PBL dependencies)
   4. DataWindow inventory (SQL, tables referenced)
   5. Refactoring suggestions (naming, structure, patterns)
-  6. Compilation readiness (missing ORCA? library list?)
+  6. Compilation readiness (library list completeness, PBGen.exe availability)
 
 Usage:
     python pb.py review <project_dir>

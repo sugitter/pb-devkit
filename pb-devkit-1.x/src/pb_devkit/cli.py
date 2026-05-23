@@ -50,11 +50,15 @@ def main():
         )
         from pb_devkit.commands.migrate import run_migrate
         from pb_devkit.commands.pack import run_pack
+        from pb_devkit.commands import autoexport, dw, review
+        from pb_devkit.commands.autoexport import run as run_autoexport
+        from pb_devkit.commands.dw import run as run_dw
+        from pb_devkit.commands.review import run as run_review
 
         parser = argparse.ArgumentParser(
             prog="pb",
-            description="PB DevKit - PowerBuilder Developer Toolkit v1.2.0")
-        parser.add_argument("--version", action="version", version="PB DevKit 1.2.0")
+            description="PB DevKit - PowerBuilder Developer Toolkit v1.6.0")
+        parser.add_argument("--version", action="version", version="PB DevKit 1.6.0 (zero-DLL)")
         parser.add_argument("--pb-version", type=int, default=None)
         parser.add_argument("--config", "-c", default=None)
         parser.add_argument("--verbose", action="store_true")
@@ -81,6 +85,9 @@ def main():
         decompile.register(sub)
         migrate.register(sub)
         pack.register(sub)
+        autoexport.register(sub)
+        dw.register(sub)
+        review.register(sub)
 
         args = parser.parse_args()
         if not args.command:
@@ -100,6 +107,9 @@ def main():
             "snapshot": run_snapshot, "decompile": run_decompile,
             "migrate": run_migrate,
             "pack": run_pack,
+            "autoexport": run_autoexport,
+            "dw": run_dw,
+            "review": run_review,
         }
 
         handler = _COMMAND_MAP.get(args.command)

@@ -16,9 +16,12 @@ import { ObjectBrowserComponent } from './components/object-browser/object-brows
 import { ProjectStatsComponent } from './components/project-stats/project-stats.component';
 import { DiffPanelComponent } from './components/diff-panel/diff-panel.component';
 import { WorkflowPanelComponent } from './components/workflow-panel/workflow-panel.component';
+import { RefactorPanelComponent } from './components/refactor-panel/refactor-panel.component';
+import { SnapshotPanelComponent } from './components/snapshot-panel/snapshot-panel.component';
+import { ReviewPanelComponent } from './components/review-panel/review-panel.component';
 import { PblService, ProjectInfo, PblFileInfo } from './services/pbl.service';
 
-type Tab = 'explorer' | 'search' | 'dw' | 'doctor' | 'pe' | 'report' | 'stats' | 'diff' | 'workflow' | 'settings';
+type Tab = 'explorer' | 'search' | 'dw' | 'doctor' | 'pe' | 'report' | 'stats' | 'diff' | 'workflow' | 'refactor' | 'snapshot' | 'review' | 'settings';
 type ContentMode = 'welcome' | 'source' | 'loading';
 type SearchMode = 'text' | 'regex';
 
@@ -45,6 +48,9 @@ type ProjectMode = 'pbl' | 'exe_pbd' | 'exe_dll' | 'mixed' | 'none';
     ProjectStatsComponent,
     DiffPanelComponent,
     WorkflowPanelComponent,
+    RefactorPanelComponent,
+    SnapshotPanelComponent,
+    ReviewPanelComponent,
   ],
   template: `
     <div class="app-layout">
@@ -61,6 +67,9 @@ type ProjectMode = 'pbl' | 'exe_pbd' | 'exe_dll' | 'mixed' | 'none';
         <button class="nav-btn" [class.active]="activeTab==='stats'" (click)="activeTab='stats'" title="项目统计"><span class="material-icons">analytics</span></button>
         <button class="nav-btn" [class.active]="activeTab==='diff'" (click)="activeTab='diff'" title="代码对比"><span class="material-icons">compare</span></button>
         <button class="nav-btn" [class.active]="activeTab==='workflow'" (click)="activeTab='workflow'" title="工作流"><span class="material-icons">account_tree</span></button>
+        <button class="nav-btn" [class.active]="activeTab==='refactor'" (click)="activeTab='refactor'" title="重构分析"><span class="material-icons">auto_fix_high</span></button>
+        <button class="nav-btn" [class.active]="activeTab==='snapshot'" (click)="activeTab='snapshot'" title="快照管理"><span class="material-icons">camera</span></button>
+        <button class="nav-btn" [class.active]="activeTab==='review'" (click)="activeTab='review'" title="项目评审"><span class="material-icons">fact_check</span></button>
         <button class="nav-btn" [class.active]="activeTab==='settings'" (click)="activeTab='settings'" title="设置"><span class="material-icons">settings</span></button>
         <div class="sidebar-spacer"></div>
         <button class="nav-btn" (click)="showAbout=!showAbout" title="关于"><span class="material-icons">info</span></button>
@@ -268,6 +277,15 @@ type ProjectMode = 'pbl' | 'exe_pbd' | 'exe_dll' | 'mixed' | 'none';
           }
           @if (activeTab === 'workflow') {
             <app-workflow-panel [projectPath]="projectPath" />
+          }
+          @if (activeTab === 'refactor') {
+            <app-refactor-panel />
+          }
+          @if (activeTab === 'snapshot') {
+            <app-snapshot-panel />
+          }
+          @if (activeTab === 'review') {
+            <app-review-panel />
           }
         </div>
       }

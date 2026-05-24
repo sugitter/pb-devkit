@@ -10,3 +10,6 @@ pub mod report;
 pub mod workflow;
 pub mod diff;
 pub mod scan;
+pub mod refactor;
+pub mod snapshot;
+pub mod review;

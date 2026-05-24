@@ -59,6 +59,13 @@ pub fn run() {
             commands::scan::migrate_project,
             commands::scan::get_project_info,
             commands::scan::find_project_pbls,
+            // Refactor commands
+            commands::refactor::run_refactor,
+            // Snapshot commands
+            commands::snapshot::take_snapshot,
+            commands::snapshot::list_snapshots,
+            // Review commands
+            commands::review::run_review,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

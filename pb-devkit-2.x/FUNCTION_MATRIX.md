@@ -47,10 +47,10 @@
 | **代码工程 / Code Engineering** |
 | diff | ✅ `diff` | ✅ `diff` | ✅ `diff-panel` | ✅ Done | |
 | workflow | ✅ `workflow` | ✅ | ✅ `workflow-panel` | ✅ Done | |
-| refactor | ✅ `refactor` | ⏳ | ⏳ | 🔄 1.x Done | 2.x Desktop 面板待补 |
-| snapshot | ✅ `snapshot` | ⏳ | ⏳ | 🔄 1.x Done | 2.x Desktop 面板待补 |
+| refactor | ✅ `refactor` | ✅ `refactor` | ✅ `refactor-panel` | ✅ Done | 2.x CLI+Desktop 完成 |
+| snapshot | ✅ `snapshot` | ✅ `snapshot` | ✅ `snapshot-panel` | ✅ Done | 2.x CLI+Desktop 完成 |
 | **高级分析 / Advanced Analysis** |
-| review | ✅ `review` | ⏳ | ⏳ | 🔄 1.x Done | 综合项目评审 / Comprehensive review |
+| review | ✅ `review` | ✅ `review` | ✅ `review-panel` | ✅ Done | 综合项目评审 / Comprehensive review |
 | autoexport | ✅ `autoexport` | — | — | ✅ 1.x Done | 智能自动导出 / Smart auto-export |
 | **迁移 / Migration** |
 | migrate | ✅ `migrate` | — | — | ✅ 1.x Done | DW/事件 → Angular TS scaffold |
@@ -80,9 +80,9 @@
 | 工作流面板 / Workflow panel | ✅ `workflow-panel` | ✅ Done |
 | 设置面板 / Settings panel | ✅ `settings-panel` | ✅ Done |
 | 进度弹窗 / Progress modal | ✅ `progress-modal` | ✅ Done |
-| 重构面板 / Refactor panel | ⏳ `refactor-panel` | ⏳ Pending |
-| 快照面板 / Snapshot panel | ⏳ `snapshot-panel` | ⏳ Pending |
-| 评审面板 / Review panel | ⏳ `review-panel` | ⏳ Pending |
+| 重构面板 / Refactor panel | ✅ `refactor-panel` | ✅ Done |
+| 快照面板 / Snapshot panel | ✅ `snapshot-panel` | ✅ Done |
+| 评审面板 / Review panel | ✅ `review-panel` | ✅ Done |
 
 ---
 
@@ -98,10 +98,10 @@
 | DataWindow | 3/3 | 3/3 | 3/3 | ✅ |
 | 反编译 / Decompile | 3/3 | 3/3 | 3/3 | ✅ |
 | 报告 / Report | 3/3 | 3/3 | 3/3 | ✅ |
-| 代码工程 / Code Eng. | 4/4 | 2/4 | 2/4 | ✅ 1.x all |
-| 高级分析 / Advanced | 3/3 | 0/3 | 0/3 | ✅ 1.x all |
+| 代码工程 / Code Eng. | 4/4 | 4/4 | 4/4 | ✅ |
+| 高级分析 / Advanced | 3/3 | 3/3 | 3/3 | ✅ |
 | 迁移 / Migration | 2/2 | — | — | ✅ 1.x only |
-| **总计 / Total** | **34/34 (100%)** | **24/24 (100%)** | **16/19 (84%)** | **✅** |
+| **总计 / Total** | **34/34 (100%)** | **27/27 (100%)** | **19/19 (100%)** | **✅** |
 
 ---
 
@@ -110,9 +110,9 @@
 ```
 1.x Python CLI (v1.6.0)           2.x Rust+Tauri+Angular (v2.1.0)
 ─────────────────────────         ────────────────────────────────
-✅ 22 命令全部就绪                   ✅ CLI 21 命令（独立 Rust binary）
-✅ 零 DLL 依赖                      ✅ Desktop 16 面板 (Angular)
-✅ pbl_writer: 源码→PBL             ⏳ Desktop 3 面板待补（refactor/snapshot/review）
+✅ 22 命令全部就绪                   ✅ CLI 24 命令（独立 Rust binary）
+✅ 零 DLL 依赖                      ✅ Desktop 19 面板 (Angular)
+✅ pbl_writer: 源码→PBL             ✅ 全功能覆盖 34/34 = 100%
 ✅ migrate: PB→Angular脚手架        
 ✅ autoexport/dw/review            
 ✅ 68 个单元测试全部通过              
@@ -124,8 +124,7 @@
 
 | 优先级 | 功能 | 说明 |
 |--------|------|------|
-| 🔴 高 | 2.x Desktop refactor/snapshot/review 面板 | 3 个 Angular 组件 + Tauri 后端调用 |
 | 🟡 中 | 更新 2.x CHANGELOG + README | 反映 1.x v1.6.0 状态 |
 | 🟢 低 | Tauri 打包发布 (NSIS/MSI) | 构建安装包 |
 
-> **结论：1.x Python 工具包已功能完备（22命令/零DLL）；2.x Desktop 完成度 84%，差 3 个面板。**
+> **结论：1.x Python 工具包已功能完备（22命令/零DLL）；2.x CLI 24命令 + Desktop 19面板，全部 100% 覆盖。**

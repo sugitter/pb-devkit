@@ -9,3 +9,6 @@ pub mod decompile_cmd;
 pub mod report_cmd;
 pub mod diff_cmd;
 pub mod workflow_cmd;
+pub mod refactor_cmd;
+pub mod snapshot_cmd;
+pub mod review_cmd;

@@ -7,7 +7,7 @@ use std::env;
 use std::process;
 
 mod commands;
-use commands::{pbl_cmd, pe_cmd, project_cmd, search_cmd, dw_cmd, decompile_cmd, report_cmd, diff_cmd, workflow_cmd};
+use commands::{pbl_cmd, pe_cmd, project_cmd, search_cmd, dw_cmd, decompile_cmd, report_cmd, diff_cmd, workflow_cmd, refactor_cmd, snapshot_cmd, review_cmd};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -76,6 +76,10 @@ fn execute_command(cmd: &str, subargs: &[String]) -> Result<String, String> {
         "diff" => diff_cmd::run_diff(subargs),
         // ── Workflow command ──
         "workflow" => workflow_cmd::run_workflow(subargs),
+        // ── Code analysis commands ──
+        "refactor" => refactor_cmd::run_refactor(subargs),
+        "snapshot" => snapshot_cmd::run_snapshot(subargs),
+        "review" => review_cmd::run_review(subargs),
         // ── Help ──
         "--help" | "-h" | "help" => {
             print_usage();
@@ -222,6 +226,11 @@ println!("  Search:");
     println!("  report <path>         Generate project report");
     println!("  export-report <path> <output.json>");
     println!("                        Export report to JSON file");
+    println!();
+    println!("  Code Analysis:");
+    println!("  refactor <dir>        Scan source for anti-patterns and suggestions");
+    println!("  snapshot <dir>        Capture project snapshot (inventory + diff)");
+    println!("  review <dir>          Full review: structure / quality / DW / deps");
     println!();
     println!("  Interactive mode:");
     println!("  interactive            Start interactive REPL mode");

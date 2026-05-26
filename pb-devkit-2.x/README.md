@@ -28,7 +28,7 @@ PB DevKit 2.1 is a modern toolkit for analyzing, maintaining, and migrating Powe
 ```
 pb-devkit-2.x/
 ├── pb-devkit-core/      # Rust core library (zero-dependency parsing)
-├── pb-devkit-cli/       # Command-line interface (27 commands)
+├── pb-devkit-cli/       # Command-line interface (30 commands)
 ├── pb-devkit-desktop/   # Tauri + Angular desktop application
 ```
 
@@ -77,7 +77,7 @@ npm run tauri dev
 | Project detect/find-PBL/doctor | ✅ | ✅ |
 | Code Engineering: diff/workflow/refactor/snapshot/review | ✅ | ✅ |
 
-**Current coverage**: 27/27 CLI commands (100%), 19/19 Desktop panels (100%)
+**Current coverage**: 30/30 CLI commands (100%), 19/19 Desktop panels (100%)
 
 ### Tech Stack
 
@@ -127,7 +127,7 @@ PB DevKit 2.1 是用于分析、维护和迁移 PowerBuilder 遗留系统的现�
 ```
 pb-devkit-2.x/
 ├── pb-devkit-core/      # Rust 核心库（零依赖 PBL/PBD/PE 解析）
-├── pb-devkit-cli/       # 命令行工具（27 条命令）
+├── pb-devkit-cli/       # 命令行工具（30 条命令）
 ├── pb-devkit-desktop/   # Tauri + Angular 桌面应用
 ```
 
@@ -176,7 +176,7 @@ npm run tauri dev
 | 项目检测/查找 PBL/环境诊断 | ✅ | ✅ |
 | 代码工程: diff/workflow/refactor/snapshot/review | ✅ | ✅ |
 
-**当前覆盖率**：27/27 CLI 命令（100%），19/19 Desktop 面板（100%）
+**当前覆盖率**：30/30 CLI 命令（100%），19/19 Desktop 面板（100%）
 
 ### 技术栈
 

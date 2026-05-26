@@ -12,3 +12,6 @@ pub mod workflow_cmd;
 pub mod refactor_cmd;
 pub mod snapshot_cmd;
 pub mod review_cmd;
+pub mod autoexport_cmd;
+pub mod migrate_cmd;
+pub mod build_cmd;

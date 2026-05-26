@@ -7,7 +7,7 @@ use std::env;
 use std::process;
 
 mod commands;
-use commands::{pbl_cmd, pe_cmd, project_cmd, search_cmd, dw_cmd, decompile_cmd, report_cmd, diff_cmd, workflow_cmd, refactor_cmd, snapshot_cmd, review_cmd};
+use commands::{pbl_cmd, pe_cmd, project_cmd, search_cmd, dw_cmd, decompile_cmd, report_cmd, diff_cmd, workflow_cmd, refactor_cmd, snapshot_cmd, review_cmd, autoexport_cmd, migrate_cmd, build_cmd};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -80,6 +80,10 @@ fn execute_command(cmd: &str, subargs: &[String]) -> Result<String, String> {
         "refactor" => refactor_cmd::run_refactor(subargs),
         "snapshot" => snapshot_cmd::run_snapshot(subargs),
         "review" => review_cmd::run_review(subargs),
+        // ── Migration commands (ported from 1.x) ──
+        "autoexport" | "auto-export" => autoexport_cmd::run_autoexport(subargs),
+        "migrate" => migrate_cmd::run_migrate(subargs),
+        "build" => build_cmd::run_build(subargs),
         // ── Help ──
         "--help" | "-h" | "help" => {
             print_usage();
@@ -114,7 +118,7 @@ fn start_interactive_mode() -> Result<(), String> {
         let _ = rl.load_history(p);
     }
 
-    println!("PB DevKit CLI v2.1.0 - Interactive Mode");
+    println!("PB DevKit CLI v2.2.0 - Interactive Mode");
     println!("Type 'help' for available commands, 'exit' / 'quit' / 'q' to quit.");
     println!();
 
@@ -179,7 +183,7 @@ fn start_interactive_mode() -> Result<(), String> {
 }
 
 fn print_usage() {
-    println!("PB DevKit CLI v2.1.0");
+    println!("PB DevKit CLI v2.2.0");
     println!("PowerBuilder Legacy System Toolkit");
     println!();
     println!("Usage: pbdevkit <command> [args...]");
@@ -231,6 +235,11 @@ println!("  Search:");
     println!("  refactor <dir>        Scan source for anti-patterns and suggestions");
     println!("  snapshot <dir>        Capture project snapshot (inventory + diff)");
     println!("  review <dir>          Full review: structure / quality / DW / deps");
+    println!();
+    println!("  Migration:");
+    println!("  autoexport <dir>      Auto-detect project type and export all sources");
+    println!("  migrate <source>      Migrate PB EXE/PBL to Angular web scaffold");
+    println!("  build <pbl> <app>     Rebuild PB application via PBGen.exe");
     println!();
     println!("  Interactive mode:");
     println!("  interactive            Start interactive REPL mode");

@@ -51,10 +51,10 @@
 | snapshot | ✅ `snapshot` | ✅ `snapshot` | ✅ `snapshot-panel` | ✅ Done | 2.x CLI+Desktop 完成 |
 | **高级分析 / Advanced Analysis** |
 | review | ✅ `review` | ✅ `review` | ✅ `review-panel` | ✅ Done | 综合项目评审 / Comprehensive review |
-| autoexport | ✅ `autoexport` | — | — | ✅ 1.x Done | 智能自动导出 / Smart auto-export |
+| autoexport | ✅ `autoexport` | ✅ `autoexport` | — | ✅ Done | 智能自动导出 / Smart auto-export |
 | **迁移 / Migration** |
-| migrate | ✅ `migrate` | — | — | ✅ 1.x Done | DW/事件 → Angular TS scaffold |
-| build | ✅ `build` (PBGen.exe) | — | — | ✅ 1.x Done | 零 DLL，调用 PBGen.exe CLI |
+| migrate | ✅ `migrate` | ✅ `migrate` | — | ✅ Done | DW/事件 → Angular TS scaffold |
+| build | ✅ `build` (PBGen.exe) | ✅ `build` | — | ✅ Done | 零 DLL，调用 PBGen.exe CLI |
 | **ORCA 引擎 / ORCA Engine** |
 | ORCA import/build | ✅ 已用 pbl_writer + PBGen.exe 替代 | ⏳ | ⏳ | ✅ 1.x 无DLL方案 | 2.x 可参考 1.x 方案实现 |
 
@@ -100,19 +100,20 @@
 | 报告 / Report | 3/3 | 3/3 | 3/3 | ✅ |
 | 代码工程 / Code Eng. | 4/4 | 4/4 | 4/4 | ✅ |
 | 高级分析 / Advanced | 3/3 | 3/3 | 3/3 | ✅ |
-| 迁移 / Migration | 2/2 | — | — | ✅ 1.x only |
-| **总计 / Total** | **34/34 (100%)** | **27/27 (100%)** | **19/19 (100%)** | **✅** |
+| 迁移 / Migration | 2/2 | 2/2 | — | ✅ |
+| autoexport | 1/1 | 1/1 | — | ✅ |
+| **总计 / Total** | **34/34 (100%)** | **30/30 (100%)** | **19/19 (100%)** | **✅** |
 
 ---
 
 ## 架构分工 / Architecture Division
 
 ```
-1.x Python CLI (v1.6.0)           2.x Rust+Tauri+Angular (v2.1.0)
+1.x Python CLI (v1.6.0)           2.x Rust+Tauri+Angular (v2.2.0)
 ─────────────────────────         ────────────────────────────────
-✅ 22 命令全部就绪                   ✅ CLI 27 命令（独立 Rust binary）
+✅ 22 命令全部就绪                   ✅ CLI 30 命令（独立 Rust binary）
 ✅ 零 DLL 依赖                      ✅ Desktop 19 面板 (Angular)
-✅ pbl_writer: 源码→PBL             ✅ 全功能覆盖 34/34 = 100%
+✅ pbl_writer: 源码→PBL             ✅ autoexport/migrate/build 移植完成
 ✅ migrate: PB→Angular脚手架        ✅ refactor/snapshot/review 三命令 ✅
 ✅ autoexport/dw/review            
 ✅ 68 个单元测试全部通过              
@@ -128,4 +129,4 @@
 | 🟢 低 | Tauri 打包发布 (NSIS/MSI) | 构建安装包 |
 | 🟢 低 | autoexport/migrate/build 移植 | 将 1.x 独占命令移植到 2.x CLI |
 
-> **结论：1.x Python 工具包已功能完备（22命令/零DLL）；2.x CLI 27命令 + Desktop 19面板，全部 100% 覆盖。**
+> **结论：1.x Python 工具包已功能完备（22命令/零DLL）；2.x CLI 30命令 + Desktop 19面板，全部 100% 覆盖。**

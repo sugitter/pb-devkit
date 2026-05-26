@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.2.0] - 2026-05-26
+
+> **Migration Complete**: 1.x独占命令全部移植到 2.x CLI，CLI 覆盖率 27→30
+
+### Added (2.x CLI)
+- **`pbdevkit autoexport`**: Smart project auto-export — auto-detects PBL_PROJECT / BINARY_PROJECT / MIXED_PROJECT; exports to `src/` with README.md generation; flags: `--detect`, `--by-type`, `--force`, `--no-readme`, `--project-name`; delegates PBL export via `export-pbl`, binary decompile via `decompile-all`
+- **`pbdevkit migrate`**: PB → Angular 18 scaffold migration — scans exported source for `w_`/`d_`/`f_`/`n_` objects; generates Angular Components (`.ts + .html + .scss`), TypeScript model interfaces, Reactive Form factories, Injectable service stubs, `AppRoutingModule`, and `MIGRATION.md` with effort estimates; flags: `--no-forms`, `--no-services`, `--project-name`
+- **`pbdevkit build`**: Rebuild PB application via PBGen.exe — three modes (`exe`/`exe+pbd`/`exe+dll`); auto-detects PBGen from PATH and common Appeon/Sybase install paths; supports `--lib-list`, `--pbd-libs`, `--dll-libs`, `--machine-code`, `--rebuild-only`, `--pbgen`; pure Rust std-lib + std::process::Command
+
+### Changed
+- CLI command count: 27 → 30 (added autoexport/migrate/build)
+- `FUNCTION_MATRIX.md`: Migration category updated to 2.x CLI 2/2 ✅; autoexport 1/1 ✅; total 2.x CLI 30/30
+- `README.md`: CLI command count 27→30; coverage updated
+- CLI version string: v2.1.0 → v2.2.0
+
+### Architecture Notes
+- autoexport/migrate: Use subprocess self-invocation (`pbdevkit export-pbl`, `pbdevkit decompile-all`) to avoid duplicating core parsing logic
+- build: Wraps PBGen.exe CLI — no PB ORCA DLL dependency
+- All new commands: zero external crate dependencies (pure std-lib)
+
+---
+
 ## [1.6.0] - 2026-05-23
 
 ### Added

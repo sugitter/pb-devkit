@@ -3,7 +3,7 @@
 > PowerBuilder 遗留系统工具包功能覆盖情况
 > PowerBuilder Legacy System Toolkit feature coverage
 
-> 更新时间 / Updated: 2026-05-24
+> 更新时间 / Updated: 2026-05-25
 
 ---
 
@@ -110,10 +110,10 @@
 ```
 1.x Python CLI (v1.6.0)           2.x Rust+Tauri+Angular (v2.1.0)
 ─────────────────────────         ────────────────────────────────
-✅ 22 命令全部就绪                   ✅ CLI 24 命令（独立 Rust binary）
+✅ 22 命令全部就绪                   ✅ CLI 27 命令（独立 Rust binary）
 ✅ 零 DLL 依赖                      ✅ Desktop 19 面板 (Angular)
 ✅ pbl_writer: 源码→PBL             ✅ 全功能覆盖 34/34 = 100%
-✅ migrate: PB→Angular脚手架        
+✅ migrate: PB→Angular脚手架        ✅ refactor/snapshot/review 三命令 ✅
 ✅ autoexport/dw/review            
 ✅ 68 个单元测试全部通过              
 ```
@@ -124,7 +124,8 @@
 
 | 优先级 | 功能 | 说明 |
 |--------|------|------|
-| 🟡 中 | 更新 2.x CHANGELOG + README | 反映 1.x v1.6.0 状态 |
+| ✅ 完成 | 更新 2.x CHANGELOG + README | 已反映 v2.1.0 状态 |
 | 🟢 低 | Tauri 打包发布 (NSIS/MSI) | 构建安装包 |
+| 🟢 低 | autoexport/migrate/build 移植 | 将 1.x 独占命令移植到 2.x CLI |
 
-> **结论：1.x Python 工具包已功能完备（22命令/零DLL）；2.x CLI 24命令 + Desktop 19面板，全部 100% 覆盖。**
+> **结论：1.x Python 工具包已功能完备（22命令/零DLL）；2.x CLI 27命令 + Desktop 19面板，全部 100% 覆盖。**

@@ -31,6 +31,33 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.1.0] - 2026-05-25
+
+> **Feature Complete**: CLI 27/27 + Desktop 19/19 = 100% coverage
+
+### Added (2.x CLI)
+- **`pbdevkit refactor`**: Code pattern scanner — detects GOTO/GLOBAL/EMPTY_CATCH/HARDCODED_SQL/LONG_FUNC anti-patterns; generates `REFACTOR_REPORT.md` with severity ratings and remediation hints
+- **`pbdevkit snapshot`**: Project snapshot tool — file manifest with SHA-256 hashes, diff between snapshots, tracks added/removed/modified files
+- **`pbdevkit review`**: Comprehensive project review — 4-phase analysis (structure → quality → security → maintainability); produces `REVIEW.md` with weighted scoring; pure std-lib, zero dependencies
+
+### Added (2.x Desktop)
+- **Refactor Panel** (`refactor-panel`): Angular UI for pattern scanning with apply/dry-run toggle
+- **Snapshot Panel** (`snapshot-panel`): Snapshot creation and diff visualization
+- **Review Panel** (`review-panel`): Five-dimension 100-point scoring dashboard with Tauri `run_review` command
+
+### Changed
+- CLI command count: 24 → 27 (added refactor/snapshot/review)
+- Desktop panel count: 16 → 19 (added refactor/snapshot/review panels)
+- `FUNCTION_MATRIX.md`: Updated coverage to CLI 27/27 (100%) + Desktop 19/19 (100%) = 34/34 overall
+- `README.md`: Updated command coverage tables to reflect 100% parity
+
+### Architecture Notes
+- All new CLI commands use pure Rust std-lib (no external crates beyond walkdir for refactor)
+- Tauri commands follow existing `invoke()` pattern in Angular components
+- Full function matrix now at 100% — no pending items in Code Engineering category
+
+---
+
 ## [2.0.0] - 2026-05-16
 
 > **Major Release**: Complete rewrite in Rust for better performance
@@ -58,8 +85,8 @@ All notable changes to this project will be documented in this file.
 - pbl_cmd.rs: Fix progress_chars Result handling (indicatif 0.17 compatibility)
 
 ### Known Issues
-- ORCA features require PBSpyORCA.dll (not included)
-- Advanced features (refactor/review/snapshot/workflow) pending
+- ORCA features require PBSpyORCA.dll (not included); replaced by pbl_writer + PBGen.exe in 1.x
+- Advanced features (refactor/review/snapshot/workflow) → **resolved in v2.1.0**
 
 ---
 

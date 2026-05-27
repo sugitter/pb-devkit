@@ -2,7 +2,7 @@
 
 use std::path::Path;
 use std::fs;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::types::{ProjectInfo, PblFileInfo, DoctorResult};
 use crate::pbl::PblParser;
@@ -273,7 +273,7 @@ pub struct MigrateResult {
 }
 
 /// 将解析的 PB 项目转换为现代 Web 项目结构
-pub fn migrate_to_web(project_path: &str, output_dir: &str, template: &str) -> Result<MigrateResult, String> {
+pub fn migrate_to_web(project_path: &str, output_dir: &str, _template: &str) -> Result<MigrateResult, String> {
     let project = Path::new(project_path);
     let output = Path::new(output_dir);
     

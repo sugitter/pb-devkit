@@ -15,7 +15,7 @@
 
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// A single refactor finding
 #[derive(Debug, Clone)]
@@ -243,7 +243,6 @@ fn scan_file_content(rel_path: &str, content: &str, findings: &mut Vec<Finding>,
     if is_pb_source {
         let content_upper = content.to_uppercase();
         // Simple heuristic: try/catch with nothing or just "return" inside
-        let try_positions: Vec<usize> = content_upper.match_indices("TRY").map(|(i, _)| i).collect();
         let catch_positions: Vec<usize> = content_upper.match_indices("CATCH").map(|(i, _)| i).collect();
         let end_try_positions: Vec<usize> = content_upper.match_indices("END TRY").map(|(i, _)| i).collect();
 

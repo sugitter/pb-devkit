@@ -14,7 +14,6 @@
 ///   pbdevkit autoexport <dir> --force
 ///   pbdevkit autoexport <dir> --no-readme
 
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -138,6 +137,7 @@ struct ProjectDetection {
     pbl_files: Vec<PathBuf>,
     exe_files: Vec<PathBuf>,
     pbd_files: Vec<PathBuf>,
+    #[allow(dead_code)]
     dll_files: Vec<PathBuf>,
 }
 

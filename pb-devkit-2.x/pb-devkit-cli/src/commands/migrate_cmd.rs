@@ -13,7 +13,6 @@
 /// Usage:
 ///   pbdevkit migrate <source> [OPTIONS]
 
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 

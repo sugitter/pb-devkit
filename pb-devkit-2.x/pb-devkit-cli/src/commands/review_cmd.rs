@@ -150,6 +150,7 @@ struct QualityFinding {
     file: String,
     line: usize,
     severity: String,
+    #[allow(dead_code)]
     rule: String,
     message: String,
 }

@@ -10,8 +10,8 @@
 use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
-use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::path::Path;
+use std::time::UNIX_EPOCH;
 
 /// A single file entry in a snapshot
 #[derive(Debug, Clone)]
@@ -111,11 +111,6 @@ fn capture_snapshot(root: &Path) -> Result<Snapshot, String> {
 
     // Sort by path for deterministic output
     entries.sort_by(|a, b| a.path.cmp(&b.path));
-
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
 
     // ISO 8601-like timestamp
     let timestamp = format_iso8601();
@@ -242,7 +237,7 @@ fn parse_snapshot_json(json: &str) -> Option<Snapshot> {
         }
     }
 
-    Some(Snapshot { timestamp, file_count, total_size, entries })
+    Some(Snapshot { timestamp, file_count: file_count as usize, total_size, entries })
 }
 
 fn extract_json_int(json: &str, key: &str) -> Option<u64> {

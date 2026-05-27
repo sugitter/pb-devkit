@@ -1,4 +1,4 @@
-// PB DevKit 2.0 - Desktop Application (Tauri)
+// PB DevKit 2.2 - Desktop Application (Tauri)
 // Thin command layer delegating to pb-devkit-core
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -7,7 +7,7 @@ pub fn run() {
         .format_timestamp_millis()
         .init();
 
-    log::info!("Starting PB DevKit 2.0...");
+    log::info!("Starting PB DevKit 2.2...");
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())

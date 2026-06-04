@@ -227,3 +227,123 @@ fn format_now_utc() -> String {
 fn is_leap_year(year: i64) -> bool {
     (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+    use std::fs;
+
+    // ─── is_leap_year ───
+
+    #[test]
+    fn leap_year_divisible_by_4() {
+        assert!(is_leap_year(2024));
+        assert!(is_leap_year(2020));
+        assert!(is_leap_year(2016));
+    }
+
+    #[test]
+    fn not_leap_year_regular() {
+        assert!(!is_leap_year(2023));
+        assert!(!is_leap_year(2022));
+        assert!(!is_leap_year(2021));
+    }
+
+    #[test]
+    fn century_not_leap() {
+        assert!(!is_leap_year(1900));
+        assert!(!is_leap_year(2100));
+    }
+
+    #[test]
+    fn century_divisible_by_400_is_leap() {
+        assert!(is_leap_year(2000));
+        assert!(is_leap_year(1600));
+    }
+
+    // ─── format_now_utc ───
+
+    #[test]
+    fn format_now_utc_produces_valid_format() {
+        let s = format_now_utc();
+        // Should look like: "2026-06-04 11:30:00 UTC"
+        assert!(s.ends_with(" UTC"));
+        assert_eq!(s.len(), "2026-06-04 00:00:00 UTC".len());
+        assert!(s.contains('-'));
+        assert!(s.contains(':'));
+        // year should be >= 2026
+        let year: i32 = s[0..4].parse().unwrap();
+        assert!(year >= 2026);
+    }
+
+    // ─── scan_directory ───
+
+    #[test]
+    fn scan_directory_finds_pbl_files() {
+        let tmp = TempDir::new().unwrap();
+        fs::write(tmp.path().join("app.pbl"), b"fake").unwrap();
+        fs::write(tmp.path().join("lib.pbl"), b"fake").unwrap();
+
+        let mut pbl = Vec::new();
+        let mut pbd = Vec::new();
+        let mut exe = Vec::new();
+        scan_directory(tmp.path(), &mut pbl, &mut pbd, &mut exe).unwrap();
+        assert_eq!(pbl.len(), 2);
+        assert_eq!(pbd.len(), 0);
+        assert_eq!(exe.len(), 0);
+    }
+
+    #[test]
+    fn scan_directory_finds_pbd_and_exe() {
+        let tmp = TempDir::new().unwrap();
+        fs::write(tmp.path().join("app.pbd"), b"fake").unwrap();
+        fs::write(tmp.path().join("app.exe"), b"fake").unwrap();
+
+        let mut pbl = Vec::new();
+        let mut pbd = Vec::new();
+        let mut exe = Vec::new();
+        scan_directory(tmp.path(), &mut pbl, &mut pbd, &mut exe).unwrap();
+        assert_eq!(pbl.len(), 0);
+        assert_eq!(pbd.len(), 1);
+        assert_eq!(exe.len(), 1);
+    }
+
+    #[test]
+    fn scan_directory_skips_dot_and_node_modules() {
+        let tmp = TempDir::new().unwrap();
+        fs::create_dir_all(tmp.path().join(".git")).unwrap();
+        fs::create_dir_all(tmp.path().join("node_modules")).unwrap();
+        fs::create_dir_all(tmp.path().join("target")).unwrap();
+        fs::write(tmp.path().join(".git").join("conf.pbl"), b"x").unwrap();
+        fs::write(tmp.path().join("node_modules").join("x.pbl"), b"x").unwrap();
+        fs::write(tmp.path().join("target").join("x.pbl"), b"x").unwrap();
+
+        let mut pbl = Vec::new();
+        let mut pbd = Vec::new();
+        let mut exe = Vec::new();
+        scan_directory(tmp.path(), &mut pbl, &mut pbd, &mut exe).unwrap();
+        assert_eq!(pbl.len(), 0);
+    }
+
+    #[test]
+    fn scan_directory_recursive() {
+        let tmp = TempDir::new().unwrap();
+        fs::create_dir_all(tmp.path().join("sub")).unwrap();
+        fs::write(tmp.path().join("sub").join("b.pbl"), b"x").unwrap();
+
+        let mut pbl = Vec::new();
+        let mut pbd = Vec::new();
+        let mut exe = Vec::new();
+        scan_directory(tmp.path(), &mut pbl, &mut pbd, &mut exe).unwrap();
+        assert_eq!(pbl.len(), 1);
+    }
+
+    // ─── export_report with nonexistent path ───
+
+    #[test]
+    fn export_report_nonexistent_path_returns_err() {
+        let result = export_report("/nonexistent/path", "/tmp/out.json");
+        assert!(result.is_err());
+    }
+}

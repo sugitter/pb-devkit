@@ -2,6 +2,7 @@
 // Shared business logic for CLI and Desktop
 
 pub mod pbl;
+pub mod pbl_writer;  // Pure-Rust PBL binary writer (no Python)
 pub mod pe;
 pub mod project;
 pub mod search;

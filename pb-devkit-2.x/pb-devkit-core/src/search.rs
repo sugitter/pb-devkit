@@ -230,3 +230,217 @@ fn find_files_by_ext(dir: &Path, ext: &str, results: &mut Vec<String>) {
         }
     }
 }
+
+// ─── Tests ────────────────────────────────────────────────────
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    // ── search_in_files ──
+    #[test]
+    fn test_search_in_files_path_not_exists() {
+        let result = search_in_files("/nonexistent", "test", false, &[]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_search_in_files_empty_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let result = search_in_files(tmp.path().to_str().unwrap(), "hello", false, &[]).unwrap();
+        assert_eq!(result.files_count, 0);
+        assert_eq!(result.total_matches, 0);
+    }
+
+    #[test]
+    fn test_search_in_files_finds_text() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("w_main.srw"), b"hello world\nfoo bar").unwrap();
+        let result = search_in_files(tmp.path().to_str().unwrap(), "hello", false, &[]).unwrap();
+        assert!(result.files_count > 0);
+        assert!(result.total_matches > 0);
+    }
+
+    #[test]
+    fn test_search_in_files_case_sensitive() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("w_main.srw"), b"Hello World").unwrap();
+        // Case-insensitive (default)
+        let r1 = search_in_files(tmp.path().to_str().unwrap(), "hello", false, &[]).unwrap();
+        assert!(r1.total_matches > 0);
+        // Case-sensitive
+        let r2 = search_in_files(tmp.path().to_str().unwrap(), "hello", true, &[]).unwrap();
+        assert_eq!(r2.total_matches, 0);
+    }
+
+    #[test]
+    fn test_search_in_files_custom_file_types() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("readme.txt"), b"hello world").unwrap();
+        fs::write(tmp.path().join("data.csr"), b"not matched").unwrap();
+        let result = search_in_files(
+            tmp.path().to_str().unwrap(), "hello", false,
+            &[".txt".into()],
+        ).unwrap();
+        assert!(result.total_matches > 0);
+    }
+
+    // ── search_file_parallel ──
+    #[test]
+    fn test_search_file_parallel_match() {
+        let tmp = tempfile::tempdir().unwrap();
+        let f = tmp.path().join("test.srw");
+        fs::write(&f, b"line one\nline two\nline three").unwrap();
+        let results = search_file_parallel(&f, "two", false);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].line_number, 2);
+    }
+
+    #[test]
+    fn test_search_file_parallel_no_match() {
+        let tmp = tempfile::tempdir().unwrap();
+        let f = tmp.path().join("test.srw");
+        fs::write(&f, b"aaa bbb ccc").unwrap();
+        let results = search_file_parallel(&f, "zzz", false);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_search_file_parallel_multiple_matches() {
+        let tmp = tempfile::tempdir().unwrap();
+        let f = tmp.path().join("test.srw");
+        fs::write(&f, b"foo foo foo\nbar bar").unwrap();
+        let results = search_file_parallel(&f, "foo", false);
+        assert_eq!(results.len(), 1); // per-line match, line 1 matches
+    }
+
+    // ── search_with_regex ──
+    #[test]
+    fn test_search_with_regex_path_not_exists() {
+        let result = search_with_regex("/nonexistent", r"\d+", false, &[]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_search_with_regex_invalid_pattern() {
+        let tmp = tempfile::tempdir().unwrap();
+        let result = search_with_regex(tmp.path().to_str().unwrap(), "[invalid", false, &[]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_search_with_regex_valid() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("test.srw"), b"phone: 12345\ncode: ABC").unwrap();
+        let result = search_with_regex(tmp.path().to_str().unwrap(), r"\d+", false, &[]).unwrap();
+        assert!(result.total_matches > 0);
+    }
+
+    // ── search_file_with_regex ──
+    #[test]
+    fn test_search_file_with_regex_match() {
+        let tmp = tempfile::tempdir().unwrap();
+        let f = tmp.path().join("test.srw");
+        fs::write(&f, b"price=100\ntotal=200").unwrap();
+        let re = regex::Regex::new(r"\d+").unwrap();
+        let results = search_file_with_regex(&f, &re);
+        assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn test_search_file_with_regex_no_match() {
+        let tmp = tempfile::tempdir().unwrap();
+        let f = tmp.path().join("test.srw");
+        fs::write(&f, b"abc def").unwrap();
+        let re = regex::Regex::new(r"\d+").unwrap();
+        let results = search_file_with_regex(&f, &re);
+        assert!(results.is_empty());
+    }
+
+    // ── search_by_type ──
+    #[test]
+    fn test_search_by_type_path_not_exists() {
+        let result = search_by_type("/nonexistent", "window");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_search_by_type_finds_srw() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("w_main.srw"), b"").unwrap();
+        fs::write(tmp.path().join("d_emp.srd"), b"").unwrap();
+        let result = search_by_type(tmp.path().to_str().unwrap(), "window").unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn test_search_by_type_unknown_type() {
+        let tmp = tempfile::tempdir().unwrap();
+        let result = search_by_type(tmp.path().to_str().unwrap(), "unknown_type").unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_search_by_type_all_known_types() {
+        let tmp = tempfile::tempdir().unwrap();
+        // Create one file per known type
+        for (ext, _fname) in &[
+            (".srw", "window"), (".srd", "datawindow"), (".srm", "menu"),
+            (".srf", "function"), (".srs", "structure"), (".sru", "userobject"),
+            (".srq", "query"), (".srp", "pipeline"), (".srj", "project"),
+            (".srx", "proxy"), (".sra", "application"),
+        ] {
+            fs::write(tmp.path().join(format!("obj{}", ext)), b"").unwrap();
+        }
+        // Each type should find exactly 1 file
+        for obj_type in &["window", "datawindow", "menu", "function", "structure",
+            "userobject", "query", "pipeline", "project", "proxy", "application"] {
+            let result = search_by_type(tmp.path().to_str().unwrap(), obj_type).unwrap();
+            assert_eq!(result.len(), 1, "Failed for type: {}", obj_type);
+        }
+    }
+
+    // ── collect_files ──
+    #[test]
+    fn test_collect_files_empty_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let files = collect_files(tmp.path(), &[".srw".into()]);
+        assert!(files.is_empty());
+    }
+
+    #[test]
+    fn test_collect_files_only_matching_exts() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("a.srw"), b"").unwrap();
+        fs::write(tmp.path().join("b.txt"), b"").unwrap();
+        let files = collect_files(tmp.path(), &[".srw".into()]);
+        assert_eq!(files.len(), 1);
+    }
+
+    #[test]
+    fn test_collect_files_skips_hidden_and_special_dirs() {
+        let tmp = tempfile::tempdir().unwrap();
+        let node_modules = tmp.path().join("node_modules");
+        fs::create_dir(&node_modules).unwrap();
+        fs::write(node_modules.join("x.srw"), b"").unwrap();
+        let target = tmp.path().join("target");
+        fs::create_dir(&target).unwrap();
+        fs::write(target.join("y.srw"), b"").unwrap();
+        fs::write(tmp.path().join("visible.srw"), b"").unwrap();
+        let files = collect_files(tmp.path(), &[".srw".into()]);
+        assert_eq!(files.len(), 1);
+    }
+
+    // ── find_files_by_ext ──
+    #[test]
+    fn test_find_files_by_ext_nested() {
+        let tmp = tempfile::tempdir().unwrap();
+        let sub = tmp.path().join("sub");
+        fs::create_dir(&sub).unwrap();
+        fs::write(tmp.path().join("a.srw"), b"").unwrap();
+        fs::write(sub.join("b.srw"), b"").unwrap();
+        let mut results = Vec::new();
+        find_files_by_ext(tmp.path(), ".srw", &mut results);
+        assert_eq!(results.len(), 2);
+    }
+}

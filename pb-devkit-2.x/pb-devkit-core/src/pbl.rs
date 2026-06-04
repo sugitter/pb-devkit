@@ -658,3 +658,375 @@ pub fn format_timestamp(secs: u32) -> String {
 fn is_leap_year(year: i64) -> bool {
     (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    /// Build a minimal valid PBL binary (ANSI, PB9.0 format).
+    /// File layout:
+    ///   0-511:    HDR* header (magic + "PB9.0" ANSI version string)
+    ///   512-1023: first data block (zeros)
+    ///   1024-4095: node block area (zeros)
+    ///   4096+:    ENT* entry blocks
+    fn build_ansi_pbl(entry_name: &str) -> Vec<u8> {
+        let mut buf = vec![0u8; 512];
+        // HDR* magic
+        buf[0] = b'H'; buf[1] = b'D'; buf[2] = b'R'; buf[3] = b'*';
+        // ANSI version string "PB9.0"
+        // "PB9.0" = 5 bytes, header offset 4-8 (5 bytes inc. null)
+        let version: &[u8] = b"PB9.0";
+        buf[4..9].copy_from_slice(version);
+
+        // Data block (512-1023)
+        buf.extend(&[0u8; 512]);
+        // Node block (1024-4095) — BLOCK_SIZE + NODE_BLOCK_SIZE = 512 + 3072 = 3584
+        buf.extend(&[0u8; 3584]);
+
+        // Entry at offset 4096 (ENT* block)
+        // Entry format (ANSI, 24 bytes fixed + name):
+        //  0-3:  "ENT*"
+        //  4-7:  version (reserved, 4 bytes)
+        //  8-11: data_offset (u32 LE)
+        // 12-15: data_size (u32 LE)
+        // 16-19: timestamp (u32 LE)
+        // 20-21: padding
+        // 22-23: name_len (u16 LE)
+        // 24+:   name bytes (ANSI)
+        let mut ent = vec![0u8; 512];
+        ent[0] = b'E'; ent[1] = b'N'; ent[2] = b'T'; ent[3] = b'*';
+        // data_offset = 0x2000 (8192)
+        let data_off: u32 = 0x2000;
+        ent[8]  = (data_off & 0xFF) as u8;
+        ent[9]  = ((data_off >> 8) & 0xFF) as u8;
+        // data_size = 512
+        let data_sz: u32 = 512;
+        ent[12] = (data_sz & 0xFF) as u8;
+        ent[13] = ((data_sz >> 8) & 0xFF) as u8;
+        // timestamp = 100000000 (2003-03-02-like)
+        let ts: u32 = 100_000_000;
+        ent[16] = (ts & 0xFF) as u8;
+        ent[17] = ((ts >> 8) & 0xFF) as u8;
+        ent[18] = ((ts >> 16) & 0xFF) as u8;
+        ent[19] = ((ts >> 24) & 0xFF) as u8;
+        // name_len
+        let nlen = entry_name.len() as u16;
+        ent[22] = (nlen & 0xFF) as u8;
+        ent[23] = ((nlen >> 8) & 0xFF) as u8;
+        // name bytes
+        ent[24..24 + entry_name.len()].copy_from_slice(entry_name.as_bytes());
+        buf.extend_from_slice(&ent);
+
+        // Pad to at least entry data area (data_offset = 0x2000 = 8192)
+        // entry offset = 4096, plus enough for entry data at 0x2000
+        while buf.len() < 0x2000 + 512 {
+            buf.push(0);
+        }
+        buf
+    }
+
+    /// Build a minimal valid PBL binary (Unicode, PB12.5 format).
+    fn build_unicode_pbl(version_str: &str) -> Vec<u8> {
+        let mut buf = vec![0u8; 512];
+        // HDR* magic
+        buf[0] = b'H'; buf[1] = b'D'; buf[2] = b'R'; buf[3] = b'*';
+        // Unicode version string (little-endian UTF-16)
+        let version = version_str.as_bytes();
+        for (i, &b) in version.iter().enumerate() {
+            if i * 2 + 1 < 20 {
+                buf[4 + i * 2] = b;      // ASCII byte
+                buf[4 + i * 2 + 1] = 0x00; // high byte (LE)
+            }
+        }
+
+        // Data + node block padding
+        // header_size = 1024 for Unicode
+        buf.extend(&[0u8; 512]); // data block
+        buf.extend(&[0u8; 3584]); // node block area
+
+        // Minimal entry (Unicode format)
+        let mut ent = vec![0u8; 512];
+        ent[0] = b'E'; ent[1] = b'N'; ent[2] = b'T'; ent[3] = b'*';
+        let data_off: u32 = 0x2000;
+        ent[8]  = (data_off & 0xFF) as u8;
+        let data_sz: u32 = 512;
+        ent[12] = (data_sz & 0xFF) as u8;
+        let ts: u32 = 100_000_000;
+        // Unicode: timestamp at offset 20
+        ent[20] = (ts & 0xFF) as u8;
+        ent[21] = ((ts >> 8) & 0xFF) as u8;
+        ent[22] = ((ts >> 16) & 0xFF) as u8;
+        ent[23] = ((ts >> 24) & 0xFF) as u8;
+        // name_len at offset 26
+        let nlen: u16 = 8;
+        ent[26] = (nlen & 0xFF) as u8;
+        ent[27] = ((nlen >> 8) & 0xFF) as u8;
+        // Unicode name "w_main" → little-endian UTF-16
+        let name = b"w_main";
+        for (i, &b) in name.iter().enumerate() {
+            ent[28 + i * 2] = b;
+            ent[28 + i * 2 + 1] = 0x00;
+        }
+        buf.extend_from_slice(&ent);
+
+        while buf.len() < 0x2000 + 512 {
+            buf.push(0);
+        }
+        buf
+    }
+
+    // ── Version Detection Tests ──
+
+    #[test]
+    fn test_detect_ansi_pb9() {
+        let header = b"HDR*PB9.0\x00\x00\x00";
+        let (ver, ok) = PblVersion::detect_from_header(header);
+        assert!(ok);
+        assert_eq!(ver, PblVersion::Pb5);
+    }
+
+    #[test]
+    fn test_detect_ansi_pb5() {
+        let header = b"HDR*PB5.0\x00\x00\x00";
+        let (ver, ok) = PblVersion::detect_from_header(header);
+        assert!(ok);
+        assert_eq!(ver, PblVersion::Pb5);
+    }
+
+    #[test]
+    fn test_detect_unicode_pb10() {
+        // Unicode "PB10" → LE UTF-16: P\0B\01\00\0
+        let mut header = vec![0u8; 24];
+        header[..4].copy_from_slice(b"HDR*");
+        // "PB10" in LE UTF-16
+        header[4] = b'P'; header[5] = 0x00;
+        header[6] = b'B'; header[7] = 0x00;
+        header[8] = b'1'; header[9] = 0x00;
+        header[10] = b'0'; header[11] = 0x00;
+        let (ver, ok) = PblVersion::detect_from_header(&header);
+        assert!(ok);
+        assert_eq!(ver, PblVersion::Pb10);
+    }
+
+    #[test]
+    fn test_detect_unicode_pb12() {
+        let mut header = vec![0u8; 24];
+        header[..4].copy_from_slice(b"HDR*");
+        header[4] = b'P'; header[5] = 0x00;
+        header[6] = b'B'; header[7] = 0x00;
+        header[8] = b'1'; header[9] = 0x00;
+        header[10] = b'2'; header[11] = 0x00;
+        let (ver, ok) = PblVersion::detect_from_header(&header);
+        assert!(ok);
+        assert_eq!(ver, PblVersion::Pb12);
+    }
+
+    #[test]
+    fn test_detect_unicode_pb125() {
+        // "PB12.5" in LE UTF-16
+        let mut header = vec![0u8; 24];
+        header[..4].copy_from_slice(b"HDR*");
+        let s = "PB12.5";
+        for (i, &b) in s.as_bytes().iter().enumerate() {
+            header[4 + i * 2] = b;
+            header[4 + i * 2 + 1] = 0x00;
+        }
+        let (ver, ok) = PblVersion::detect_from_header(&header);
+        assert!(ok);
+        assert_eq!(ver, PblVersion::Pb125);
+    }
+
+    #[test]
+    fn test_detect_unicode_pb126() {
+        // "PB12.6" in LE UTF-16
+        let mut header = vec![0u8; 24];
+        header[..4].copy_from_slice(b"HDR*");
+        let s = "PB12.6";
+        for (i, &b) in s.as_bytes().iter().enumerate() {
+            header[4 + i * 2] = b;
+            header[4 + i * 2 + 1] = 0x00;
+        }
+        let (ver, ok) = PblVersion::detect_from_header(&header);
+        assert!(ok);
+        assert_eq!(ver, PblVersion::Pb126);
+    }
+
+    #[test]
+    fn test_detect_invalid_magic() {
+        let header = b"XXXXPB9.0\x00\x00\x00";
+        let (ver, ok) = PblVersion::detect_from_header(header);
+        assert!(!ok);
+        assert_eq!(ver, PblVersion::Unknown);
+    }
+
+    // ── PBL File Parsing Tests ──
+
+    #[test]
+    fn test_parse_ansi_pbl() {
+        let data = build_ansi_pbl("w_main.srw");
+        let mut tmp = NamedTempFile::new().unwrap();
+        tmp.write_all(&data).unwrap();
+        tmp.flush().unwrap();
+        let path = tmp.path().to_string_lossy().to_string();
+
+        let parser = PblParser::new(&path).unwrap();
+        assert!(!parser.is_unicode);
+        assert_eq!(parser.pb_version, PblVersion::Pb5);
+        assert!(!parser.entries().is_empty());
+        assert_eq!(parser.entries()[0].name, "w_main.srw");
+        assert_eq!(parser.entries()[0].entry_type_name, "window");
+    }
+
+    #[test]
+    fn test_parse_unicode_pbl() {
+        let data = build_unicode_pbl("PB12.5");
+        let mut tmp = NamedTempFile::new().unwrap();
+        tmp.write_all(&data).unwrap();
+        tmp.flush().unwrap();
+        let path = tmp.path().to_string_lossy().to_string();
+
+        let parser = PblParser::new(&path).unwrap();
+        assert!(parser.is_unicode);
+        assert_eq!(parser.pb_version, PblVersion::Pb125);
+    }
+
+    #[test]
+    fn test_reject_non_pbl() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        tmp.write_all(b"not a pbl file at all").unwrap();
+        tmp.flush().unwrap();
+        let path = tmp.path().to_string_lossy().to_string();
+
+        let result = PblParser::new(&path);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_reject_too_small() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        // Only 4 bytes, not enough for header
+        tmp.write_all(b"HDR*").unwrap();
+        tmp.flush().unwrap();
+        let path = tmp.path().to_string_lossy().to_string();
+
+        let result = PblParser::new(&path);
+        assert!(result.is_err());
+    }
+
+    // ── Type Detection Tests ──
+
+    #[test]
+    fn test_detect_source_types() {
+        assert_eq!(PblParser::detect_type_from_name("w_main.srw"), (2, true));   // window
+        assert_eq!(PblParser::detect_type_from_name("d_emp.srd"), (1, true));     // datawindow
+        assert_eq!(PblParser::detect_type_from_name("m_frame.srm"), (3, true));   // menu
+        assert_eq!(PblParser::detect_type_from_name("f_calc.srf"), (4, true));    // function
+        assert_eq!(PblParser::detect_type_from_name("s_emp.srs"), (5, true));     // structure
+        assert_eq!(PblParser::detect_type_from_name("uo_my.sru"), (6, true));     // userobject
+        assert_eq!(PblParser::detect_type_from_name("app.sra"), (0, true));       // application
+    }
+
+    #[test]
+    fn test_detect_compiled_types() {
+        let (t, src) = PblParser::detect_type_from_name("w_main.win");
+        assert_eq!(t, 11);
+        assert!(!src, "compiled extensions are not source");
+
+        let (t2, src2) = PblParser::detect_type_from_name("d_emp.dwo");
+        assert_eq!(t2, 11);
+        assert!(!src2);
+    }
+
+    #[test]
+    fn test_detect_unknown_type() {
+        let (t, src) = PblParser::detect_type_from_name("something.xyz");
+        assert_eq!(t, 11); // BINARY
+        assert!(!src);
+    }
+
+    // ── Timestamp Formatting Tests ──
+
+    #[test]
+    fn test_format_timestamp_epoch() {
+        let result = format_timestamp(0);
+        assert_eq!(result, "1970-01-01 00:00:00");
+    }
+
+    #[test]
+    fn test_format_timestamp_known() {
+        // ~1.1 billion secs ≈ 2004 (PB internal seconds since 1970)
+        let result = format_timestamp(1_100_000_000);
+        assert!(result.starts_with("200"), "should be in the 2000s");
+        assert!(!result.ends_with("00:00:00"), "should not be epoch");
+    }
+
+    // ── PblVersion Display Tests ──
+
+    #[test]
+    fn test_version_display_strings() {
+        assert_eq!(PblVersion::Pb5.as_str(), "PB5-PB9 (ANSI)");
+        assert_eq!(PblVersion::Pb10.as_str(), "PB10-PB11 (Unicode)");
+        assert_eq!(PblVersion::Pb12.as_str(), "PB12-PB12.5 (Unicode)");
+        assert_eq!(PblVersion::Pb125.as_str(), "PB 12.5+ (Unicode)");
+        assert_eq!(PblVersion::Pb126.as_str(), "PB 12.6+ (Unicode)");
+        assert_eq!(PblVersion::Unknown.as_str(), "Unknown");
+    }
+
+    #[test]
+    fn test_version_short_strings() {
+        assert_eq!(PblVersion::Pb5.short_str(), "PB5-PB9");
+        assert_eq!(PblVersion::Pb10.short_str(), "PB10-PB11");
+        assert_eq!(PblVersion::Unknown.short_str(), "Unknown");
+    }
+
+    // ── Info / to_info Tests ──
+
+    #[test]
+    fn test_get_info() {
+        let data = build_ansi_pbl("w_main.srw");
+        let mut tmp = NamedTempFile::new().unwrap();
+        tmp.write_all(&data).unwrap();
+        tmp.flush().unwrap();
+        let path = tmp.path().to_string_lossy().to_string();
+
+        let parser = PblParser::new(&path).unwrap();
+        let info = parser.get_info().unwrap();
+        assert_eq!(info.total_entries, 1);
+        assert_eq!(info.source_entries, 1);
+        assert_eq!(info.compiled_entries, 0);
+        assert!(!info.is_unicode);
+    }
+
+    #[test]
+    fn test_export_entry_not_found() {
+        let data = build_ansi_pbl("w_main.srw");
+        let mut tmp = NamedTempFile::new().unwrap();
+        tmp.write_all(&data).unwrap();
+        tmp.flush().unwrap();
+        let path = tmp.path().to_string_lossy().to_string();
+
+        let parser = PblParser::new(&path).unwrap();
+        let result = parser.export_entry("nonexistent");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_export_pbl() {
+        let data = build_ansi_pbl("w_main.srw");
+        let mut tmp = NamedTempFile::new().unwrap();
+        tmp.write_all(&data).unwrap();
+        tmp.flush().unwrap();
+        let path = tmp.path().to_string_lossy().to_string();
+
+        let parser = PblParser::new(&path).unwrap();
+        let out_dir = tmp.path().parent().unwrap().join("export_pbl_test");
+        let count = parser.export_pbl(out_dir.to_string_lossy().as_ref(), false).unwrap();
+        assert_eq!(count, 1);
+
+        // Verify exported file
+        let exported = out_dir.join("w_main.srw");
+        assert!(exported.exists());
+    }
+}

@@ -281,20 +281,38 @@ fn parse_table_name(s: &str) -> String {
 fn extract_columns(content: &str) -> Vec<String> {
     let mut columns = Vec::new();
 
-    // Pattern: name="col_name" in column() definitions
-    let pattern = "name=\"";
-    let mut search_start = 0;
-
-    while let Some(pos) = content[search_start..].find(pattern) {
-        let actual_pos = search_start + pos + pattern.len();
-        if let Some(end) = content[actual_pos..].find('"') {
-            let col_name = &content[actual_pos..actual_pos+end];
-            if !col_name.is_empty() {
-                columns.push(col_name.to_string());
+    // Support both formats:
+    //   name="col_name"   (PB DataWindow source)
+    //   name=col_name     (PB exported column definitions)
+    let patterns = ["name=\"", "name="];
+    
+    for pattern in &patterns {
+        let mut search_start = 0;
+        while let Some(pos) = content[search_start..].find(pattern) {
+            let actual_pos = search_start + pos + pattern.len();
+            // For quoted: stop at closing "; for unquoted: stop at ), \n, or comma
+            let end_char = if pattern.ends_with('"') { '"' } else { '\0' };
+            
+            if end_char == '"' {
+                if let Some(end) = content[actual_pos..].find('"') {
+                    let col_name = &content[actual_pos..actual_pos+end];
+                    if !col_name.is_empty() {
+                        columns.push(col_name.to_string());
+                    }
+                    search_start = actual_pos + end + 1;
+                } else {
+                    break;
+                }
+            } else {
+                // Unquoted: extract until ), \n, comma, or end
+                let end = content[actual_pos..].find(|c: char| c == ')' || c == '\n' || c == ',')
+                    .unwrap_or(content.len() - actual_pos);
+                let col_name = content[actual_pos..actual_pos + end].trim();
+                if !col_name.is_empty() {
+                    columns.push(col_name.to_string());
+                }
+                search_start = actual_pos + end + 1;
             }
-            search_start = actual_pos + end + 1;
-        } else {
-            break;
         }
     }
 
@@ -397,7 +415,7 @@ pub fn extract_group_by_clause(sql: &str) -> Option<String> {
     let lower = sql.to_lowercase();
     let group_idx = lower.find("group by ")?;
 
-    let rest = &sql[group_idx + 10..]; // skip "group by "
+    let rest = &sql[group_idx + "group by ".len()..]; // skip "group by "
     let end_markers = [" having ", " order by ", " union "];
     let mut end_pos = rest.len();
 
@@ -603,4 +621,344 @@ pub fn detect_subqueries(content: &str) -> Vec<SubQuery> {
     }
 
     subqueries
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── extract_sql ──
+
+    #[test]
+    fn test_extract_sql_basic_select() {
+        let content = "SELECT id, name FROM users\ncolumn(name=id)";
+        let sql = extract_sql(content);
+        assert!(sql.is_some());
+        let s = sql.unwrap().to_lowercase();
+        assert!(s.contains("select"));
+        assert!(s.contains("from"));
+    }
+
+    #[test]
+    fn test_extract_sql_with_where() {
+        let content = "SELECT * FROM employees WHERE dept_id = 1\ncolumn(name=id)";
+        let sql = extract_sql(content).unwrap();
+        assert!(sql.to_lowercase().contains("where"));
+    }
+
+    #[test]
+    fn test_extract_sql_no_sql() {
+        let content = "release 12.5;\ntable(name=d_emp)";
+        let sql = extract_sql(content);
+        assert!(sql.is_none());
+    }
+
+    #[test]
+    fn test_extract_sql_pb_formatted() {
+        let content = r#"release 12.5;
+datawindow(units=0 timer_interval=0 processing=0)
+sql='SELECT name, salary FROM emp WHERE salary > 50000'
+table(name=emp)"#;
+        let sql = extract_sql(content).unwrap();
+        assert!(sql.contains("SELECT") || sql.contains("select"));
+    }
+
+    // ── parse_table_name ──
+
+    #[test]
+    fn test_parse_simple_table() {
+        assert_eq!(parse_table_name("employees"), "employees");
+    }
+
+    #[test]
+    fn test_parse_table_with_alias() {
+        assert_eq!(parse_table_name("employees e"), "employees");
+    }
+
+    #[test]
+    fn test_parse_table_with_comma() {
+        assert_eq!(parse_table_name("employees,"), "employees");
+    }
+
+    #[test]
+    fn test_parse_bracketed_table() {
+        assert_eq!(parse_table_name("[dbo].[employees]"), "dbo.employees");
+    }
+
+    #[test]
+    fn test_parse_quoted_table() {
+        assert_eq!(parse_table_name("\"my_table\""), "my_table");
+    }
+
+    #[test]
+    fn test_parse_empty_table() {
+        assert_eq!(parse_table_name(""), "");
+    }
+
+    #[test]
+    fn test_parse_table_with_join() {
+        assert_eq!(parse_table_name("employees\n"), "employees");
+    }
+
+    // ── extract_tables ──
+
+    #[test]
+    fn test_extract_tables_from_simple_select() {
+        let content = "SELECT * FROM users";
+        let tables = extract_tables(content);
+        assert!(tables.contains(&"users".to_string()));
+    }
+
+    #[test]
+    fn test_extract_tables_from_join() {
+        let content = "SELECT * FROM orders JOIN customers ON orders.cid = customers.id";
+        let tables = extract_tables(content);
+        assert!(tables.contains(&"orders".to_string()));
+        assert!(tables.contains(&"customers".to_string()));
+    }
+
+    #[test]
+    fn test_extract_tables_filter_keywords() {
+        let content = "SELECT * FROM employees WHERE salary > 10000";
+        let tables = extract_tables(content);
+        // "where" should not appear as a table
+        assert!(!tables.contains(&"where".to_string()));
+    }
+
+    // ── find_sql_end ──
+
+    #[test]
+    fn test_find_sql_end_at_group_by() {
+        let text = "SELECT * FROM t\nGROUP BY id";
+        let end = find_sql_end(text);
+        assert!(end > 0);
+        assert!(end <= text.len());
+    }
+
+    #[test]
+    fn test_find_sql_end_at_order_by() {
+        let text = "SELECT a, b FROM t\nORDER BY a";
+        let end = find_sql_end(text);
+        assert!(end > 0);
+        assert!(end <= text.len());
+    }
+
+    // ── extract_columns ──
+
+    #[test]
+    fn test_extract_columns_basic() {
+        let content = r#"column(name=id)
+column(name=emp_name)
+column(name=salary)"#;
+        let cols = extract_columns(content);
+        assert!(cols.contains(&"id".to_string()));
+        assert!(cols.contains(&"emp_name".to_string()));
+        assert!(cols.contains(&"salary".to_string()));
+    }
+
+    #[test]
+    fn test_extract_columns_no_columns() {
+        let content = "some text without column definitions";
+        let cols = extract_columns(content);
+        assert!(cols.is_empty());
+    }
+
+    // ── detect_dw_style ──
+
+    #[test]
+    fn test_detect_grid_style() {
+        let style = detect_dw_style("release 12.5;\nprocessing=0\nGrid\ntable(...)");
+        assert_eq!(style, Some("Grid".to_string()));
+    }
+
+    #[test]
+    fn test_detect_tabular_style() {
+        let style = detect_dw_style("Tabular\ntable(emp)");
+        assert_eq!(style, Some("Tabular".to_string()));
+    }
+
+    #[test]
+    fn test_detect_freeform_style() {
+        let style = detect_dw_style("Freeform\ncolumn(...)");
+        assert_eq!(style, Some("Freeform".to_string()));
+    }
+
+    #[test]
+    fn test_detect_composite_style() {
+        let style = detect_dw_style("Composite\nreport(...)");
+        assert_eq!(style, Some("Composite".to_string()));
+    }
+
+    #[test]
+    fn test_detect_no_style() {
+        let style = detect_dw_style("some random content");
+        assert_eq!(style, None);
+    }
+
+    // ── extract_where_clause ──
+
+    #[test]
+    fn test_extract_where_simple() {
+        let sql = "SELECT * FROM t WHERE a = 1";
+        let wc = extract_where_clause(sql);
+        assert_eq!(wc, Some("a = 1".to_string()));
+    }
+
+    #[test]
+    fn test_extract_where_with_order_by() {
+        let sql = "SELECT * FROM t WHERE a = 1 ORDER BY b";
+        let wc = extract_where_clause(sql);
+        assert_eq!(wc, Some("a = 1".to_string()));
+    }
+
+    #[test]
+    fn test_extract_where_with_group_by() {
+        let sql = "SELECT * FROM t WHERE x > 0 GROUP BY y";
+        let wc = extract_where_clause(sql);
+        assert_eq!(wc, Some("x > 0".to_string()));
+    }
+
+    #[test]
+    fn test_extract_where_none() {
+        let sql = "SELECT * FROM t";
+        assert_eq!(extract_where_clause(sql), None);
+    }
+
+    // ── extract_order_by_clause ──
+
+    #[test]
+    fn test_extract_order_by_simple() {
+        let sql = "SELECT * FROM t ORDER BY name ASC";
+        let ob = extract_order_by_clause(sql);
+        assert_eq!(ob, Some("name ASC".to_string()));
+    }
+
+    #[test]
+    fn test_extract_order_by_multiple() {
+        let sql = "SELECT * FROM t ORDER BY dept, salary DESC";
+        let ob = extract_order_by_clause(sql);
+        assert_eq!(ob, Some("dept, salary DESC".to_string()));
+    }
+
+    #[test]
+    fn test_extract_order_by_none() {
+        assert_eq!(extract_order_by_clause("SELECT * FROM t"), None);
+    }
+
+    // ── extract_group_by_clause ──
+
+    #[test]
+    fn test_extract_group_by_simple() {
+        let sql = "SELECT dept, COUNT(*) FROM t GROUP BY dept";
+        let gb = extract_group_by_clause(sql);
+        assert_eq!(gb, Some("dept".to_string()));
+    }
+
+    #[test]
+    fn test_extract_group_by_with_having() {
+        let sql = "SELECT dept, COUNT(*) FROM t GROUP BY dept HAVING COUNT(*) > 5";
+        let gb = extract_group_by_clause(sql);
+        assert_eq!(gb, Some("dept".to_string()));
+    }
+
+    #[test]
+    fn test_extract_group_by_none() {
+        assert_eq!(extract_group_by_clause("SELECT * FROM t"), None);
+    }
+
+    // ── extract_arguments ──
+
+    #[test]
+    fn test_extract_arguments_from_arguments_section() {
+        let content = "arguments=(dept_id integer, start_date date)";
+        let args = extract_arguments(content);
+        assert!(!args.is_empty());
+        assert!(args.iter().any(|a| a.name == "dept_id"));
+        assert!(args.iter().any(|a| a.name == "start_date"));
+    }
+
+    #[test]
+    fn test_extract_arguments_from_argument_block() {
+        let content = r#"argument(name="dept_id" type=long)"#;
+        let args = extract_arguments(content);
+        assert!(!args.is_empty());
+        assert!(args.iter().any(|a| a.name == "dept_id"));
+    }
+
+    #[test]
+    fn test_extract_arguments_none() {
+        let args = extract_arguments("no arguments here");
+        assert!(args.is_empty());
+    }
+
+    // ── extract_computed_columns ──
+
+    #[test]
+    fn test_extract_computed_columns_basic() {
+        let content = r#"compute(name="total" expression="price * quantity")"#;
+        let cols = extract_computed_columns(content);
+        assert!(!cols.is_empty());
+        assert_eq!(cols[0].name, "total");
+        assert_eq!(cols[0].expression, "price * quantity");
+    }
+
+    #[test]
+    fn test_extract_computed_columns_none() {
+        let cols = extract_computed_columns("no compute here");
+        assert!(cols.is_empty());
+    }
+
+    // ── detect_union ──
+
+    #[test]
+    fn test_detect_union_found() {
+        let content = "SELECT a FROM t1 UNION SELECT b FROM t2";
+        let (has_union, _) = detect_union(content);
+        assert!(has_union);
+    }
+
+    #[test]
+    fn test_detect_union_all() {
+        let content = "SELECT a FROM t1 UNION ALL SELECT b FROM t2";
+        let (has_union, _) = detect_union(content);
+        assert!(has_union);
+    }
+
+    #[test]
+    fn test_detect_union_none() {
+        let (has_union, _) = detect_union("SELECT a FROM t1");
+        assert!(!has_union);
+    }
+
+    // ── detect_subqueries ──
+
+    #[test]
+    fn test_detect_in_subquery() {
+        let content = "SELECT * FROM orders WHERE cid IN (SELECT id FROM customers)";
+        let sq = detect_subqueries(content);
+        assert!(!sq.is_empty());
+        assert!(sq.iter().any(|s| s.query_type == "in"));
+    }
+
+    #[test]
+    fn test_detect_exists_subquery() {
+        let content = "SELECT * FROM t WHERE EXISTS (SELECT 1 FROM t2 WHERE t.id = t2.fk)";
+        let sq = detect_subqueries(content);
+        assert!(!sq.is_empty());
+        assert!(sq.iter().any(|s| s.query_type == "exists"));
+    }
+
+    #[test]
+    fn test_detect_subqueries_none() {
+        let sq = detect_subqueries("SELECT * FROM t");
+        assert!(sq.is_empty());
+    }
+
+    // ── get_dw_sql (edge case) ──
+
+    #[test]
+    fn test_get_dw_sql_file_not_found() {
+        let result = get_dw_sql("/nonexistent/path.dw");
+        assert!(result.is_err());
+    }
 }

@@ -142,14 +142,15 @@ impl ProjectSnapshot {
                     });
                 }
             } else {
-                removed.push(path.to_string());
+                // Path exists in self (new) but not other (old) → was ADDED
+                added.push(path.to_string());
             }
         }
 
-        // Find added
+        // Find removed (paths in old but not in new)
         for (path, _pbl) in &other_map {
             if !self_map.contains_key(path) {
-                added.push(path.to_string());
+                removed.push(path.to_string());
             }
         }
 
@@ -195,7 +196,7 @@ impl SnapshotDiff {
     /// Get summary of changes
     pub fn summary(&self) -> String {
         format!(
-            "Objects: {} ({}), Changes: {}, Added: {}, Removed: {}",
+            "Objects: {}{}, Changes: {}, Added: {}, Removed: {}",
             if self.object_count_delta >= 0 { "+" } else { "" },
             self.object_count_delta,
             self.changes.len(),
@@ -257,5 +258,242 @@ impl SnapshotManager {
     pub fn delete_snapshot(&self, id: &str) -> Result<(), String> {
         let filepath = format!("{}/{}.json", self.snapshots_dir, id);
         fs::remove_file(&filepath).map_err(|e| e.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn make_pbl(path: &str, entries: usize) -> PblSnapshot {
+        PblSnapshot {
+            path: path.to_string(),
+            name: path.to_string(),
+            size: 1024,
+            entry_count: entries,
+            source_count: entries / 2,
+            compiled_count: entries - entries / 2,
+            is_unicode: true,
+            pb_version: "12.5".to_string(),
+        }
+    }
+
+    // ─── ProjectSnapshot::new ───
+
+    #[test]
+    fn new_creates_valid_snapshot() {
+        let snap = ProjectSnapshot::new("/proj", "v1", "initial");
+        assert!(!snap.id.is_empty());
+        assert_eq!(snap.name, "v1");
+        assert_eq!(snap.root_path, "/proj");
+        assert_eq!(snap.description, "initial");
+        assert_eq!(snap.total_objects, 0);
+        assert_eq!(snap.total_files, 0);
+        assert!(snap.pbl_files.is_empty());
+        assert!(snap.created_at > 0);
+    }
+
+    #[test]
+    fn new_ids_are_unique() {
+        let s1 = ProjectSnapshot::new("/a", "n", "d");
+        let s2 = ProjectSnapshot::new("/a", "n", "d");
+        assert_ne!(s1.id, s2.id);
+    }
+
+    // ─── add_pbl ───
+
+    #[test]
+    fn add_pbl_updates_counters() {
+        let mut snap = ProjectSnapshot::new("/p", "v1", "");
+        snap.add_pbl(make_pbl("a.pbl", 10));
+        assert_eq!(snap.total_objects, 10);
+        assert_eq!(snap.total_files, 1);
+
+        snap.add_pbl(make_pbl("b.pbl", 20));
+        assert_eq!(snap.total_objects, 30);
+        assert_eq!(snap.total_files, 2);
+    }
+
+    // ─── save / load ───
+
+    #[test]
+    fn save_and_load_roundtrip() {
+        let tmp = TempDir::new().unwrap();
+        let mut snap = ProjectSnapshot::new("/p", "v1", "test snapshot");
+        snap.add_pbl(make_pbl("a.pbl", 10));
+
+        let path = snap.save(tmp.path().to_str().unwrap()).unwrap();
+        let loaded = ProjectSnapshot::load(&path).unwrap();
+        assert_eq!(loaded.name, "v1");
+        assert_eq!(loaded.total_objects, 10);
+        assert_eq!(loaded.total_files, 1);
+    }
+
+    #[test]
+    fn save_creates_directory_if_missing() {
+        let tmp = TempDir::new().unwrap();
+        let snap = ProjectSnapshot::new("/p", "v1", "");
+        let subdir = tmp.path().join("nested").join("snaps");
+        let path = snap.save(subdir.to_str().unwrap()).unwrap();
+        assert!(Path::new(&path).exists());
+    }
+
+    #[test]
+    fn load_nonexistent_returns_err() {
+        let result = ProjectSnapshot::load("/nonexistent/path/snap.json");
+        assert!(result.is_err());
+    }
+
+    // ─── compare ───
+
+    #[test]
+    fn compare_detects_added() {
+        let mut old = ProjectSnapshot::new("/p", "v1", "");
+        old.add_pbl(make_pbl("a.pbl", 5));
+
+        let mut new = ProjectSnapshot::new("/p", "v2", "");
+        new.add_pbl(make_pbl("a.pbl", 5));
+        new.add_pbl(make_pbl("b.pbl", 3));
+
+        let diff = new.compare(&old);
+        assert_eq!(diff.added.len(), 1);
+        assert!(diff.added[0].contains("b.pbl"));
+        assert_eq!(diff.removed.len(), 0);
+    }
+
+    #[test]
+    fn compare_detects_removed() {
+        let mut old = ProjectSnapshot::new("/p", "v1", "");
+        old.add_pbl(make_pbl("a.pbl", 5));
+        old.add_pbl(make_pbl("b.pbl", 3));
+
+        let mut new = ProjectSnapshot::new("/p", "v2", "");
+        new.add_pbl(make_pbl("a.pbl", 5));
+
+        let diff = new.compare(&old);
+        assert_eq!(diff.removed.len(), 1);
+        assert!(diff.removed[0].contains("b.pbl"));
+    }
+
+    #[test]
+    fn compare_detects_modified_entry_count() {
+        let mut old = ProjectSnapshot::new("/p", "v1", "");
+        old.add_pbl(make_pbl("a.pbl", 5));
+
+        let mut new = ProjectSnapshot::new("/p", "v2", "");
+        new.add_pbl(make_pbl("a.pbl", 10));
+
+        let diff = new.compare(&old);
+        assert_eq!(diff.changes.len(), 1);
+        assert_eq!(diff.changes[0].change_type, "modified");
+    }
+
+    #[test]
+    fn compare_no_changes() {
+        let mut old = ProjectSnapshot::new("/p", "v1", "");
+        old.add_pbl(make_pbl("a.pbl", 5));
+
+        let mut new = ProjectSnapshot::new("/p", "v2", "");
+        new.add_pbl(make_pbl("a.pbl", 5));
+
+        let diff = new.compare(&old);
+        assert!(diff.changes.is_empty());
+        assert!(diff.added.is_empty());
+        assert!(diff.removed.is_empty());
+    }
+
+    #[test]
+    fn compare_object_count_delta() {
+        let mut old = ProjectSnapshot::new("/p", "v1", "");
+        old.add_pbl(make_pbl("a.pbl", 10));
+
+        let mut new = ProjectSnapshot::new("/p", "v2", "");
+        new.add_pbl(make_pbl("a.pbl", 15));
+        new.add_pbl(make_pbl("b.pbl", 5));
+
+        let diff = new.compare(&old);
+        assert_eq!(diff.object_count_delta, 10); // 20 - 10
+    }
+
+    // ─── SnapshotDiff ───
+
+    #[test]
+    fn diff_summary_format() {
+        let diff = SnapshotDiff {
+            snapshot_id: "s1".into(),
+            compared_to: "s2".into(),
+            changes: vec![FileChange {
+                path: "a.pbl".into(),
+                change_type: "modified".into(),
+                old_value: Some(5),
+                new_value: Some(10),
+            }],
+            added: vec!["b.pbl".into()],
+            removed: vec![],
+            object_count_delta: 5,
+        };
+        let s = diff.summary();
+        assert!(s.contains("+5"));
+        assert!(s.contains("Changes: 1"));
+        assert!(s.contains("Added: 1"));
+        assert!(s.contains("Removed: 0"));
+    }
+
+    #[test]
+    fn diff_has_changes_true() {
+        let diff = SnapshotDiff {
+            snapshot_id: "s1".into(),
+            compared_to: "s2".into(),
+            changes: vec![],
+            added: vec!["x".into()],
+            removed: vec![],
+            object_count_delta: 0,
+        };
+        assert!(diff.has_changes());
+    }
+
+    #[test]
+    fn diff_has_changes_false() {
+        let diff = SnapshotDiff {
+            snapshot_id: "s1".into(),
+            compared_to: "s2".into(),
+            changes: vec![],
+            added: vec![],
+            removed: vec![],
+            object_count_delta: 0,
+        };
+        assert!(!diff.has_changes());
+    }
+
+    // ─── SnapshotManager ───
+
+    #[test]
+    fn manager_list_empty() {
+        let tmp = TempDir::new().unwrap();
+        let mgr = SnapshotManager::new(tmp.path().to_str().unwrap());
+        let snaps = mgr.list_snapshots().unwrap();
+        assert!(snaps.is_empty());
+    }
+
+    #[test]
+    fn manager_save_and_list() {
+        let tmp = TempDir::new().unwrap();
+        // SnapshotManager looks in {root}/.pbdevkit/snapshots/
+        let snap_dir = tmp.path().join(".pbdevkit").join("snapshots");
+        let snap = ProjectSnapshot::new("/p", "v1", "desc");
+        snap.save(snap_dir.to_str().unwrap()).unwrap();
+
+        let mgr = SnapshotManager::new(tmp.path().to_str().unwrap());
+        let snaps = mgr.list_snapshots().unwrap();
+        assert!(!snaps.is_empty());
+    }
+
+    #[test]
+    fn manager_delete_nonexistent_returns_err() {
+        let tmp = TempDir::new().unwrap();
+        let mgr = SnapshotManager::new(tmp.path().to_str().unwrap());
+        let result = mgr.delete_snapshot("nonexistent");
+        assert!(result.is_err());
     }
 }

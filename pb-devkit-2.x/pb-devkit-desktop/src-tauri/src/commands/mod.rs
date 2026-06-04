@@ -13,3 +13,4 @@ pub mod scan;
 pub mod refactor;
 pub mod snapshot;
 pub mod review;
+pub mod build;

@@ -1,4 +1,4 @@
-# PB DevKit 2.1
+# PB DevKit 2.2
 
 > PowerBuilder Legacy System Toolkit / PowerBuilder 遗留系统工具包
 
@@ -10,7 +10,7 @@
 
 ### Overview
 
-PB DevKit 2.1 is a modern toolkit for analyzing, maintaining, and migrating PowerBuilder legacy systems. Built with Rust for core parsing and Tauri + Angular for the desktop application.
+PB DevKit 2.2 is a modern toolkit for analyzing, maintaining, and migrating PowerBuilder legacy systems. Built with Rust for core parsing and Tauri + Angular for the desktop application.
 
 ### Features
 
@@ -76,8 +76,10 @@ npm run tauri dev
 | Report / export / stats | ✅ | ✅ |
 | Project detect/find-PBL/doctor | ✅ | ✅ |
 | Code Engineering: diff/workflow/refactor/snapshot/review | ✅ | ✅ |
+| Migration: migrate (PB→Angular scaffold) | ✅ | ✅ |
+| Build: build (PBGen.exe compiler) | ✅ | ✅ |
 
-**Current coverage**: 30/30 CLI commands (100%), 19/19 Desktop panels (100%)
+**Current coverage**: 30/30 CLI commands (100%), 22/22 Desktop panels (100%)
 
 ### Tech Stack
 
@@ -92,7 +94,7 @@ npm run tauri dev
 - [x] PE info view UI ✅
 - [x] Project statistics panel ✅
 
-### v2.1 优化方向 (Planning)
+### v2.2 优化方向 (Planning)
 
 | 优先级 | 功能 | 说明 |
 |--------|------|------|
@@ -100,7 +102,7 @@ npm run tauri dev
 | 🔴 高 | 批量导出进度显示 | CLI 进度条 + Desktop 进度 Modal |
 | 🟡 中 | PBL 版本检测增强 | 自动检测版本、区分 ANSI/Unicode、PB 12.5+ |
 | 🟡 中 | 搜索性能优化 | 并行搜索、索引文件、增量搜索 |
-| 🟢 低 | autoexport/migrate/build 移植 | 将 1.x 独占命令移植到 2.x CLI |
+| ✅ 完成 | autoexport/migrate/build 移植 | v2.2.1 — CLI + Desktop 100% |
 | ✅ 完成 | refactor/snapshot/review | CLI 三命令 + Desktop 三面板 100% |
 
 ---
@@ -109,7 +111,7 @@ npm run tauri dev
 
 ### 概述
 
-PB DevKit 2.1 是用于分析、维护和迁移 PowerBuilder 遗留系统的现代化工具包。采用 Rust 构建核心解析引擎，Tauri + Angular 构建桌面应用。
+PB DevKit 2.2 是用于分析、维护和迁移 PowerBuilder 遗留系统的现代化工具包。采用 Rust 构建核心解析引擎，Tauri + Angular 构建桌面应用。
 
 ### 功能特性
 
@@ -175,8 +177,10 @@ npm run tauri dev
 | 报告 / 导出 / 统计 | ✅ | ✅ |
 | 项目检测/查找 PBL/环境诊断 | ✅ | ✅ |
 | 代码工程: diff/workflow/refactor/snapshot/review | ✅ | ✅ |
+| 迁移向导: migrate (PB→Angular 脚手架) | ✅ | ✅ |
+| 构建面板: build (PBGen.exe 编译器) | ✅ | ✅ |
 
-**当前覆盖率**：30/30 CLI 命令（100%），19/19 Desktop 面板（100%）
+**当前覆盖率**：30/30 CLI 命令（100%），22/22 Desktop 面板（100%）
 
 ### 技术栈
 
@@ -191,7 +195,7 @@ npm run tauri dev
 - [x] PE 信息视图 UI ✅
 - [x] 项目统计面板 ✅
 
-### v2.1 优化方向
+### v2.2 优化方向
 
 | 优先级 | 功能 | 说明 |
 |--------|------|------|
@@ -199,7 +203,7 @@ npm run tauri dev
 | 🔴 高 | 批量导出进度显示 | CLI 进度条 + Desktop 进度 Modal |
 | 🟡 中 | PBL 版本检测增强 | 自动检测版本、区分 ANSI/Unicode、PB 12.5+ |
 | 🟡 中 | 搜索性能优化 | 并行搜索、索引文件、增量搜索 |
-| 🟢 低 | autoexport/migrate/build 移植 | 将 1.x 独占命令移植到 2.x CLI |
+| ✅ 完成 | autoexport/migrate/build 移植 | v2.2.1 — CLI + Desktop 100% |
 | ✅ 完成 | refactor/snapshot/review | CLI 三命令 + Desktop 三面板 100% |
 
 ### License / 许可证

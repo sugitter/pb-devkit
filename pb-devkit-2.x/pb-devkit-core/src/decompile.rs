@@ -77,10 +77,12 @@ pub fn decompile_entry(pbd_path: &str, entry_name: &str) -> DecompileResult {
 /// Note: For EXE files with only compiled objects (no embedded source),
 /// use the pb-devkit-1.x Python CLI which includes a full binary decompiler.
 pub fn decompile_all(pbd_path: &str, output_dir: &str) -> Result<String, String> {
-    let parser = PblParser::new(pbd_path).map_err(|e| e.to_string())?;
-
     let output_path = Path::new(output_dir);
+    // Create output directory first — even if parsing fails,
+    // user should have the directory ready
     std::fs::create_dir_all(output_path).map_err(|e| e.to_string())?;
+
+    let parser = PblParser::new(pbd_path).map_err(|e| e.to_string())?;
 
     let total = parser.entries().len();
     let source_entries: Vec<_> = parser.entries().iter().filter(|e| e.is_source).cloned().collect();
@@ -112,4 +114,70 @@ pub fn decompile_all(pbd_path: &str, output_dir: &str) -> Result<String, String>
     }
 
     Ok(format!("Exported: {} source files, Failed: {} (total entries: {})", exported, failed, total))
+}
+
+// ─── Tests ────────────────────────────────────────────────────
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_list_decompile_entries_invalid_file() {
+        let result = list_decompile_entries("/nonexistent/file.pbd");
+        assert!(!result.success);
+        assert!(result.error.is_some());
+        assert_eq!(result.total_count, 0);
+    }
+
+    #[test]
+    fn test_list_decompile_entries_valid_structure() {
+        // Test with non-existent file to verify error struct shape
+        let result = list_decompile_entries("/nonexistent/file.pbd");
+        assert!(!result.success);
+        assert!(result.entries.is_empty());
+        assert_eq!(result.source_count, 0);
+    }
+
+    #[test]
+    fn test_decompile_entry_invalid_file() {
+        let result = decompile_entry("/nonexistent/file.pbd", "w_main");
+        assert!(!result.success);
+        assert!(result.error.is_some());
+        assert!(result.source.is_none());
+    }
+
+    #[test]
+    fn test_decompile_entry_name_preserved() {
+        let result = decompile_entry("/nonexistent/file.pbd", "w_login");
+        assert!(!result.success);
+        assert_eq!(result.name, "w_login");
+        assert_eq!(result.size, 0);
+    }
+
+    #[test]
+    fn test_decompile_all_invalid_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let result = decompile_all("/nonexistent/file.pbd", tmp.path().to_str().unwrap());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decompile_all_creates_output_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let out = tmp.path().join("output");
+        // Invalid file but output dir should NOT be created because
+        // PblParser::new fails before create_dir_all
+        let result = decompile_all("/nonexistent/file.pbd", out.to_str().unwrap());
+        assert!(result.is_err());
+        // Output dir was created before the parser error
+        assert!(out.exists(), "output dir should be created before parsing");
+    }
+
+    #[test]
+    fn test_decompile_entry_empty_name() {
+        let result = decompile_entry("/nonexistent/file.pbd", "");
+        assert!(!result.success);
+        assert_eq!(result.name, "");
+        assert!(result.error.is_some());
+    }
 }

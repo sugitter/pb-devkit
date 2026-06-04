@@ -74,3 +74,44 @@ pub fn run_doctor() -> Result<String, String> {
 
     Ok(output)
 }
+
+pub fn scan_and_export(args: &[String]) -> Result<String, String> {
+    if args.len() < 2 {
+        return Err("Usage: pbdevkit scan-export <project_path> <output_dir>".to_string());
+    }
+    let result = project::scan_and_export(&args[0], &args[1])?;
+    let status = if result.success { "✓" } else { "✗" };
+    let mut output = format!(
+        "{} Scan & Export: {} PBLs, {} sources, {} entries, {} exported, {} failed\n",
+        status, result.pbl_count, result.source_count,
+        result.entry_count, result.exported_count, result.failed_count
+    );
+    output.push_str(&format!("Output: {}\n", result.output_dir));
+    if !result.errors.is_empty() {
+        output.push_str("\nErrors:\n");
+        for e in &result.errors {
+            output.push_str(&format!("  ✗ {}\n", e));
+        }
+    }
+    Ok(output)
+}
+
+pub fn pack_sources_to_pbl(args: &[String]) -> Result<String, String> {
+    if args.len() < 2 {
+        return Err("Usage: pbdevkit pack-to-pbl <source_dir> <output_pbl>".to_string());
+    }
+    let result = project::pack_sources_to_pbl(&args[0], &args[1])?;
+    let status = if result.success { "✓" } else { "✗" };
+    let mut output = format!(
+        "{} Pack to PBL: {} entries packed (engine: {})\n",
+        status, result.packed_count, result.engine
+    );
+    output.push_str(&format!("Output: {}\n", result.pbl_path));
+    if !result.errors.is_empty() {
+        output.push_str("\nErrors:\n");
+        for e in &result.errors {
+            output.push_str(&format!("  ✗ {}\n", e));
+        }
+    }
+    Ok(output)
+}

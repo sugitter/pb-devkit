@@ -3,7 +3,7 @@
 > PowerBuilder 遗留系统工具包功能覆盖情况
 > PowerBuilder Legacy System Toolkit feature coverage
 
-> 更新时间 / Updated: 2026-05-25
+> 更新时间 / Updated: 2026-06-04
 
 ---
 
@@ -28,6 +28,8 @@
 | doctor | ✅ `doctor` | ✅ `doctor` | ✅ `run_doctor` | ✅ Done | 1.x: Python+pbl_parser+pbl_writer 三项检测 |
 | init / detect | ✅ `init` | ✅ `project` | ✅ `detect_project` | ✅ Done | |
 | find_pbl | ✅ (via `init`) | ✅ `find-pbl` | ✅ `find_pbl_files` | ✅ Done | |
+| scan_export | — | ✅ `scan-export` | ✅ `autoexport-panel` | ✅ Done | v2.2.1 扫描项目一键导出全部源码 / Scan & export all sources |
+| pack_to_pbl | ✅ `pack` (1.x) | ✅ `pack-to-pbl` | ✅ `autoexport-panel` | ✅ Done | v2.2.1 源码文件打包回 PBL / Pack sources into PBL |
 | **搜索 / Search** |
 | search | ✅ `search` | ✅ `search` | ✅ `search_in_files` | ✅ Done | |
 | search_by_type | ✅ `search` | ✅ `search-type` | ✅ `search_by_type` | ✅ Done | |
@@ -51,10 +53,10 @@
 | snapshot | ✅ `snapshot` | ✅ `snapshot` | ✅ `snapshot-panel` | ✅ Done | 2.x CLI+Desktop 完成 |
 | **高级分析 / Advanced Analysis** |
 | review | ✅ `review` | ✅ `review` | ✅ `review-panel` | ✅ Done | 综合项目评审 / Comprehensive review |
-| autoexport | ✅ `autoexport` | ✅ `autoexport` | — | ✅ Done | 智能自动导出 / Smart auto-export |
+| autoexport | ✅ `autoexport` | ✅ `autoexport` | ✅ `autoexport-panel` | ✅ Done | v2.2.1 一键导出专用面板 / One-click export panel |
 | **迁移 / Migration** |
-| migrate | ✅ `migrate` | ✅ `migrate` | — | ✅ Done | DW/事件 → Angular TS scaffold |
-| build | ✅ `build` (PBGen.exe) | ✅ `build` | — | ✅ Done | 零 DLL，调用 PBGen.exe CLI |
+| migrate | ✅ `migrate` | ✅ `migrate` | ✅ `migrate-panel` | ✅ Done | DW/事件 → Angular TS scaffold |
+| build | ✅ `build` (PBGen.exe) | ✅ `build` | ✅ `build-panel` | ✅ Done | 零 DLL，调用 PBGen.exe CLI |
 | **ORCA 引擎 / ORCA Engine** |
 | ORCA import/build | ✅ 已用 pbl_writer + PBGen.exe 替代 | ⏳ | ⏳ | ✅ 1.x 无DLL方案 | 2.x 可参考 1.x 方案实现 |
 
@@ -83,6 +85,9 @@
 | 重构面板 / Refactor panel | ✅ `refactor-panel` | ✅ Done |
 | 快照面板 / Snapshot panel | ✅ `snapshot-panel` | ✅ Done |
 | 评审面板 / Review panel | ✅ `review-panel` | ✅ Done |
+| 自动导出面板 / Autoexport panel | ✅ `autoexport-panel` | ✅ Done |
+| 迁移向导 / Migrate panel | ✅ `migrate-panel` | ✅ Done |
+| 构建面板 / Build panel | ✅ `build-panel` | ✅ Done |
 
 ---
 
@@ -93,30 +98,31 @@
 | 核心 PBL 操作（读）/ Core PBL Read | 4/4 | 4/4 | 4/4 | ✅ |
 | PBL 写入 / PBL Write | 3/3 | — | — | ✅ 1.x only |
 | PE 解析 / PE Analysis | 3/3 | 3/3 | 3/3 | ✅ |
-| 项目管理 / Project Mgmt | 3/3 | 3/3 | 3/3 | ✅ |
+| 项目管理 / Project Mgmt | 3/3 | 5/5 | 3/3 | ✅ |
 | 搜索 / Search | 3/3 | 3/3 | 3/3 | ✅ |
 | DataWindow | 3/3 | 3/3 | 3/3 | ✅ |
 | 反编译 / Decompile | 3/3 | 3/3 | 3/3 | ✅ |
 | 报告 / Report | 3/3 | 3/3 | 3/3 | ✅ |
 | 代码工程 / Code Eng. | 4/4 | 4/4 | 4/4 | ✅ |
-| 高级分析 / Advanced | 3/3 | 3/3 | 3/3 | ✅ |
-| 迁移 / Migration | 2/2 | 2/2 | — | ✅ |
-| autoexport | 1/1 | 1/1 | — | ✅ |
-| **总计 / Total** | **34/34 (100%)** | **30/30 (100%)** | **19/19 (100%)** | **✅** |
+| 高级分析 / Advanced | 2/2 | 2/2 | 2/2 | ✅ |
+| 迁移 / Migration | 2/2 | 2/2 | 2/2 | ✅ |
+| autoexport | 1/1 | 1/1 | 1/1 | ✅ |
+| **总计 / Total** | **34/34 (100%)** | **32/32 (100%)** | **22/22 (100%)** | **✅** |
 
 ---
 
 ## 架构分工 / Architecture Division
 
 ```
-1.x Python CLI (v1.6.0)           2.x Rust+Tauri+Angular (v2.2.0)
+1.x Python CLI (v1.6.0)           2.x Rust+Tauri+Angular (v2.2.1)
 ─────────────────────────         ────────────────────────────────
 ✅ 22 命令全部就绪                   ✅ CLI 30 命令（独立 Rust binary）
-✅ 零 DLL 依赖                      ✅ Desktop 19 面板 (Angular)
+✅ 零 DLL 依赖                      ✅ Desktop 22 面板 (Angular)
 ✅ pbl_writer: 源码→PBL             ✅ autoexport/migrate/build 移植完成
-✅ migrate: PB→Angular脚手架        ✅ refactor/snapshot/review 三命令 ✅
-✅ autoexport/dw/review            
-✅ 68 个单元测试全部通过              
+✅ migrate: PB→Angular脚手架        ✅ migrate-panel: 迁移向导 GUI ✅
+✅ autoexport/dw/review            ✅ build-panel: PBGen.exe 编译 GUI ✅
+✅ 68 个单元测试全部通过              ✅ 114 个单元测试 (PE/PBL/DW/Project/Search/Decompile)
+
 ```
 
 ---
@@ -125,8 +131,10 @@
 
 | 优先级 | 功能 | 说明 |
 |--------|------|------|
-| ✅ 完成 | 更新 2.x CHANGELOG + README | 已反映 v2.1.0 状态 |
-| 🟢 低 | Tauri 打包发布 (NSIS/MSI) | 构建安装包 |
-| 🟢 低 | autoexport/migrate/build 移植 | 将 1.x 独占命令移植到 2.x CLI |
+| ✅ 完成 | 更新 2.x CHANGELOG + README | 已反映 v2.2.0 状态 |
+| ✅ 完成 | Tauri 打包发布 (NSIS/MSI) | `PB DevKit_2.2.0_x64_en-US.msi` + `PB DevKit_2.2.0_x64-setup.exe` |
+| ✅ 完成 | autoexport/migrate/build 移植 | 2.x CLI 30 命令已全部就绪 |
+| 🟢 低 | GitHub Release v2.2.0 tag | 上传 MSI/NSIS 安装包到 GitHub Releases |
+| ✅ 完成 | Desktop autoexport 面板 | v2.2.1 — 一键导出专用面板，含进度/结果/历史 |
 
-> **结论：1.x Python 工具包已功能完备（22命令/零DLL）；2.x CLI 30命令 + Desktop 19面板，全部 100% 覆盖。**
+> **结论：1.x Python 工具包已功能完备（22命令/零DLL）；2.x CLI 30命令 + Desktop 22面板，全部 100% 覆盖。测试体系 114 个单元测试覆盖 6 个核心模块。**

@@ -57,6 +57,8 @@ fn execute_command(cmd: &str, subargs: &[String]) -> Result<String, String> {
         // ── Project commands ──
         "project" | "detect" => project_cmd::detect_project(subargs),
         "find-pbl" => project_cmd::find_pbl_files(subargs),
+        "scan-export" => project_cmd::scan_and_export(subargs),
+        "pack-to-pbl" => project_cmd::pack_sources_to_pbl(subargs),
         "doctor" => project_cmd::run_doctor(),
         // ── Search commands ──
         "search" => search_cmd::search_in_files(subargs),
@@ -118,7 +120,7 @@ fn start_interactive_mode() -> Result<(), String> {
         let _ = rl.load_history(p);
     }
 
-    println!("PB DevKit CLI v2.2.0 - Interactive Mode");
+    println!("PB DevKit CLI v2.2.1 - Interactive Mode");
     println!("Type 'help' for available commands, 'exit' / 'quit' / 'q' to quit.");
     println!();
 
@@ -183,7 +185,7 @@ fn start_interactive_mode() -> Result<(), String> {
 }
 
 fn print_usage() {
-    println!("PB DevKit CLI v2.2.0");
+    println!("PB DevKit CLI v2.2.1");
     println!("PowerBuilder Legacy System Toolkit");
     println!();
     println!("Usage: pbdevkit <command> [args...]");
@@ -206,14 +208,18 @@ fn print_usage() {
     println!("  Project:");
     println!("  project <path>        Detect PowerBuilder project");
     println!("  find-pbl <path>       List all PBL files recursively");
+    println!("  scan-export <path> <dir>");
+    println!("                        Scan project and export all sources");
+    println!("  pack-to-pbl <src_dir> <output.pbl>");
+    println!("                        Pack source files into a PBL");
     println!("  doctor                 Run environment diagnostics");
     println!();
-println!("  Search:");
-        println!("  search <path> <query> Search in source files");
-        println!("  search-type <path> <type>");
-        println!("                        Search by object type");
-        println!("  search-regex <path> <pattern>");
-        println!("                        Search using regex pattern");
+    println!("  Search:");
+    println!("  search <path> <query> Search in source files");
+    println!("  search-type <path> <type>");
+    println!("                        Search by object type");
+    println!("  search-regex <path> <pattern>");
+    println!("                        Search using regex pattern");
     println!();
     println!("  DataWindow:");
     println!("  analyze-dw <path>     Analyze DataWindow objects");
@@ -230,6 +236,10 @@ println!("  Search:");
     println!("  report <path>         Generate project report");
     println!("  export-report <path> <output.json>");
     println!("                        Export report to JSON file");
+    println!();
+    println!("  Workflow & Diff:");
+    println!("  workflow <path>       Run workflow analysis");
+    println!("  diff <a> <b>          Compare two source files or dirs");
     println!();
     println!("  Code Analysis:");
     println!("  refactor <dir>        Scan source for anti-patterns and suggestions");

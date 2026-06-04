@@ -1,5 +1,27 @@
 # PB DevKit 2.x 开发进度
 
+## ✅ 已完成 (v2.2.1) - 2026-06-04 更新
+
+### 本次更新 (2026-06-04)
+- [x] 新增 `migrate-panel` Angular 组件 — PB→Web 迁移向导（步骤引导 + 分析结果 + 统计卡片）
+- [x] 新增 `build-panel` Angular 组件 — PBGen.exe 编译 GUI（自动检测 PBGen + 多编译模式 + 日志）
+- [x] Tauri 后端新增 `commands/build.rs`（`check_pbgen` / `build_pb_application`）
+- [x] `MigrateResult` 补充 `components` / `services` / `models` 别名字段（修复前端字段不匹配）
+- [x] `app.component.ts` 集成两个新面板，侧边栏添加 `transform` / `construction` 图标
+- [x] `FUNCTION_MATRIX.md` Desktop 覆盖率 20/20 → 22/22（100%），migrate/build 状态从 — 改为 ✅
+- [x] `README.md` 中英双语同步更新
+- [x] PE 解析器增强（`pe.rs`）：支持 PB 10+ 单一 EXE 的三层扫描策略
+  - 解析 Optional Header DataDirectory 获取 Certificate Table 偏移 + .rsrc 段定位
+  - 扫描窗口 4KB→64KB；新增 .rsrc 段内扫描 + 全文件兜底扫描（≤256MB）
+  - 解决 logistic.exe（PB 10.0 单一 EXE）识别失败问题
+- [x] 测试体系补强（111 新测试：PE 14 + PBL 17 + DW 30 + Project 21 + Search 22 + Decompile 7）— 项目测试从 3→114
+- [x] CI/CD 增强（`.github/workflows/ci.yml`）— 新增 clippy/fmt/audit + Windows builder + Node 22
+- [x] `Cargo.toml` 清理 — `tempfile` 从 `[dependencies]` 移至 `[dev-dependencies]`
+- [x] 清理脚手架残留文件：`app.component.html` 和 `app.component.css`（未被引用，各仅 1 行）
+  > ⚠️ 需手动删除，sandbox 被 D/F 盘限制
+
+---
+
 ## ✅ 已完成 (v2.1.0) - 2026-05-18 更新
 
 ### 本次更新 (2026-05-18)
@@ -94,7 +116,7 @@
 | decompile | decompile, decompile-all, list-decompile | ✅ 100% |
 | report | report, export-report | ✅ 100% |
 | **CLI 总计** | **21 commands** | **✅ 100%** |
-| **Desktop** | **22 panels** | **✅ 79%** |
+| **Desktop** | **22 panels** | **✅ 100%** |
 | orca | import, build, compile | ⏳ (需 DLL) |
 | advanced | refactor, review, snapshot, workflow, diff | ⏳ |
 

@@ -1,18 +1,18 @@
-/// pb-devkit CLI — `autoexport` command
-///
-/// Auto-detect project type and export all sources to a structured src/ directory.
-/// Supports three project types:
-///   PBL_PROJECT    — Export .pbl source files by PBL grouping or object type
-///   BINARY_PROJECT — Decompile EXE/PBD embedded sources via pb-devkit-core
-///   MIXED_PROJECT  — PBL export (primary) + decompiled binaries (_decompiled/)
-///
-/// Usage:
-///   pbdevkit autoexport <dir>
-///   pbdevkit autoexport <dir> -o ./src
-///   pbdevkit autoexport <dir> --detect
-///   pbdevkit autoexport <dir> --by-type
-///   pbdevkit autoexport <dir> --force
-///   pbdevkit autoexport <dir> --no-readme
+//! pb-devkit CLI — `autoexport` command
+//!
+//! Auto-detect project type and export all sources to a structured src/ directory.
+//! Supports three project types:
+//!   PBL_PROJECT    — Export .pbl source files by PBL grouping or object type
+//!   BINARY_PROJECT — Decompile EXE/PBD embedded sources via pb-devkit-core
+//!   MIXED_PROJECT  — PBL export (primary) + decompiled binaries (_decompiled/)
+//!
+//! Usage:
+//!   pbdevkit autoexport <dir>
+//!   pbdevkit autoexport <dir> -o ./src
+//!   pbdevkit autoexport <dir> --detect
+//!   pbdevkit autoexport <dir> --by-type
+//!   pbdevkit autoexport <dir> --force
+//!   pbdevkit autoexport <dir> --no-readme
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -46,9 +46,9 @@ pub fn run_autoexport(args: &[String]) -> Result<String, String> {
 
     // ── Step 1: Detect project type ──────────────────────────────────────────
     let mut output = Vec::new();
-    output.push(format!("{}", "=".repeat(60)));
+    output.push("=".repeat(60).to_string());
     output.push("  pb autoexport — Smart Project Export".to_string());
-    output.push(format!("{}", "=".repeat(60)));
+    output.push("=".repeat(60).to_string());
     output.push(String::new());
     output.push(format!("[1/3] Scanning project: {}", target.display()));
 
@@ -116,7 +116,7 @@ pub fn run_autoexport(args: &[String]) -> Result<String, String> {
     // ── Summary ───────────────────────────────────────────────────────────────
     output.push(String::new());
     output.push("[3/3] Complete".to_string());
-    output.push(format!("{}", "=".repeat(60)));
+    output.push("=".repeat(60).to_string());
     output.push(format!("  Project type:  {}", detection.project_type));
     output.push(format!("  Project name:  {}", project_name));
     output.push(format!("  Output:        {}", out_dir.display()));
@@ -124,7 +124,7 @@ pub fn run_autoexport(args: &[String]) -> Result<String, String> {
     if failed > 0 {
         output.push(format!("  Failed:        {} entries", failed));
     }
-    output.push(format!("{}", "=".repeat(60)));
+    output.push("=".repeat(60).to_string());
 
     Ok(output.join("\n"))
 }
@@ -325,7 +325,7 @@ fn export_mixed_project(
     // Phase 2: decompile binaries to _decompiled/
     if !det.exe_files.is_empty() || !det.pbd_files.is_empty() {
         let decompiled_out = out_dir.join("_decompiled");
-        output.push(format!("\n  [Phase 2/2] Decompiling binaries → _decompiled/"));
+        output.push("\n  [Phase 2/2] Decompiling binaries → _decompiled/".to_string());
         output.push("    (supplementary reference; PBL sources are authoritative)".to_string());
         let (t2, f2) = export_binary_project(det, &decompiled_out, project_name, true, output);
         total += t2;

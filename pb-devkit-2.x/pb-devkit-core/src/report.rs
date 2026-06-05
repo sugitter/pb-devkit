@@ -105,7 +105,7 @@ pub fn generate_report(project_path: &str) -> Result<ProjectReport, String> {
     }
 
     let mut top_types: Vec<(String, usize)> = type_counts.into_iter().collect();
-    top_types.sort_by(|a, b| b.1.cmp(&a.1));
+    top_types.sort_by_key(|b| std::cmp::Reverse(b.1));
     let top_types: Vec<(String, usize)> = top_types.into_iter().take(10).collect();
 
     let avg_size = if !pbl_files.is_empty() {

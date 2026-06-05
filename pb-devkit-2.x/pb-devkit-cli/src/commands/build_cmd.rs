@@ -1,18 +1,18 @@
-/// pb-devkit CLI — `build` command
-///
-/// Rebuild a PowerBuilder application via the PBGen CLI tool.
-///
-/// Three compilation modes:
-///   exe       — Single EXE (all code embedded, no external PBDs)
-///   exe+pbd   — EXE + separate PBD files (runtime-loadable components)
-///   exe+dll   — EXE + DLL files (PowerBuilder DLL libraries)
-///
-/// NOTE: Requires PowerBuilder IDE installed (PBGen.exe).
-///
-/// Usage:
-///   pbdevkit build <pbl> <app_name>
-///   pbdevkit build <pbl> <app_name> --mode exe+pbd
-///   pbdevkit build <pbl> <app_name> --mode exe+dll --dll-libs lib1.pbl,lib2.pbl
+//! pb-devkit CLI — `build` command
+//!
+//! Rebuild a PowerBuilder application via the PBGen CLI tool.
+//!
+//! Three compilation modes:
+//!   exe       — Single EXE (all code embedded, no external PBDs)
+//!   exe+pbd   — EXE + separate PBD files (runtime-loadable components)
+//!   exe+dll   — EXE + DLL files (PowerBuilder DLL libraries)
+//!
+//! NOTE: Requires PowerBuilder IDE installed (PBGen.exe).
+//!
+//! Usage:
+//!   pbdevkit build <pbl> <app_name>
+//!   pbdevkit build <pbl> <app_name> --mode exe+pbd
+//!   pbdevkit build <pbl> <app_name> --mode exe+dll --dll-libs lib1.pbl,lib2.pbl
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -51,16 +51,14 @@ pub fn run_build(args: &[String]) -> Result<String, String> {
 
     // Locate PBGen.exe
     let pbgen = find_pbgen(explicit_pbgen.as_deref())
-        .ok_or_else(|| format!(
-            "PowerBuilder PBGen.exe not found.\n\
+        .ok_or_else(|| "PowerBuilder PBGen.exe not found.\n\
             Install PowerBuilder, then either:\n\
             1. Add PBGen.exe to your PATH, or\n\
             2. Use --pbgen <path_to_PBGen.exe>\n\n\
             Typical location:\n  C:\\Program Files\\Appeon\\PowerBuilder xx.x\\PBGen.exe\n\n\
             For EXE analysis (no IDE needed), use:\n\
               pbdevkit export-pbl <your.pbl> ./src\n\
-              pbdevkit migrate <your.pbl> -o ./web-output"
-        ))?;
+              pbdevkit migrate <your.pbl> -o ./web-output".to_string())?;
 
     // Build library list
     let lib_paths = parse_lib_list(lib_list.as_deref(), &pbl_path);
@@ -98,9 +96,9 @@ pub fn run_build(args: &[String]) -> Result<String, String> {
     }
 
     let mut output = Vec::new();
-    output.push(format!("{}", "=".repeat(60)));
+    output.push("=".repeat(60).to_string());
     output.push("  pb build — PowerBuilder Compiler".to_string());
-    output.push(format!("{}", "=".repeat(60)));
+    output.push("=".repeat(60).to_string());
     output.push(format!("  PBL:      {}", pbl_path.display()));
     output.push(format!("  App:      {}", app_name));
     output.push(format!("  Mode:     {}", mode));
@@ -139,9 +137,9 @@ pub fn run_build(args: &[String]) -> Result<String, String> {
     }
 
     output.push(String::new());
-    output.push(format!("{}", "=".repeat(60)));
+    output.push("=".repeat(60).to_string());
     output.push(format!("  Build complete — mode: {}", mode));
-    output.push(format!("{}", "=".repeat(60)));
+    output.push("=".repeat(60).to_string());
 
     Ok(output.join("\n"))
 }
@@ -233,8 +231,7 @@ fn compute_pbd_flags(mode: &str, lib_list: &[PathBuf], pbd_libs: Option<&str>, d
                 let stem = lib.file_stem().and_then(|s| s.to_str())
                     .unwrap_or("").to_lowercase();
                 if i == 0 { 'n' }
-                else if !pbd_names.is_empty() && pbd_names.contains(&stem) { 'y' }
-                else if pbd_names.is_empty() { 'y' }
+                else if pbd_names.is_empty() || pbd_names.contains(&stem) { 'y' }
                 else { 'n' }
             }).collect()
         }
@@ -250,8 +247,7 @@ fn compute_pbd_flags(mode: &str, lib_list: &[PathBuf], pbd_libs: Option<&str>, d
                 let stem = lib.file_stem().and_then(|s| s.to_str())
                     .unwrap_or("").to_lowercase();
                 if i == 0 { 'n' }
-                else if !dll_names.is_empty() && dll_names.contains(&stem) { 'd' }
-                else if dll_names.is_empty() { 'd' }
+                else if dll_names.is_empty() || dll_names.contains(&stem) { 'd' }
                 else { 'n' }
             }).collect()
         }

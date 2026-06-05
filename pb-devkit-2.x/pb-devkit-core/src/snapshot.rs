@@ -148,7 +148,7 @@ impl ProjectSnapshot {
         }
 
         // Find removed (paths in old but not in new)
-        for (path, _pbl) in &other_map {
+        for path in other_map.keys() {
             if !self_map.contains_key(path) {
                 removed.push(path.to_string());
             }
@@ -243,7 +243,7 @@ impl SnapshotManager {
         }
 
         // Sort by creation time (newest first)
-        snapshots.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        snapshots.sort_by_key(|b| std::cmp::Reverse(b.created_at));
 
         Ok(snapshots)
     }

@@ -109,7 +109,7 @@ impl PblWriter {
         data: Vec<u8>,
         timestamp: Option<u32>,
     ) {
-        let ts = timestamp.unwrap_or_else(|| now_unix());
+        let ts = timestamp.unwrap_or_else(now_unix);
         let name_lower = name.to_lowercase();
         if self.entries.iter().any(|e| e.name.to_lowercase() == name_lower) {
             return; // Skip duplicates
@@ -245,7 +245,7 @@ impl PblWriter {
         let mut cur = dat_start;
         for e in &self.entries {
             entry_offsets.push(cur);
-            let block_count = ((e.data.len() + MAX_DATA_PER_BLOCK - 1) / MAX_DATA_PER_BLOCK).max(1);
+            let block_count = e.data.len().div_ceil(MAX_DATA_PER_BLOCK).max(1);
             cur += block_count * BLOCK_SIZE;
         }
 
@@ -728,7 +728,7 @@ mod tests {
         assert!(out.exists());
         let data = fs::read(&out).unwrap();
         assert_eq!(&data[0..4], b"HDR*");
-        assert!(data.len() % 512 == 0);
+        assert!(data.len().is_multiple_of(512));
     }
 
     #[test]

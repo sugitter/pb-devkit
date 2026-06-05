@@ -49,11 +49,7 @@ pub fn run_snapshot(args: &[String]) -> Result<String, String> {
 
     // Compare with previous
     let prev = load_previous_snapshot(&output_dir);
-    let diff = if let Some(ref prev_snap) = prev {
-        Some(compute_diff(prev_snap, &snapshot))
-    } else {
-        None
-    };
+    let diff = prev.as_ref().map(|prev_snap| compute_diff(prev_snap, &snapshot));
 
     // Save snapshot
     save_snapshot(&output_dir, &snapshot, diff.as_ref())?;
@@ -380,7 +376,7 @@ fn render_text_output(target: &str, snap: &Snapshot, diff: Option<&SnapshotDiff>
     out.push_str(&format!("Timestamp:    {}\n", snap.timestamp));
 
     if let Some(d) = diff {
-        out.push_str(&format!("\nChanges from previous snapshot:\n"));
+        out.push_str("\nChanges from previous snapshot:\n");
         out.push_str(&format!("  + {} added\n", d.added.len()));
         out.push_str(&format!("  - {} removed\n", d.removed.len()));
         out.push_str(&format!("  ~ {} modified\n", d.modified.len()));
@@ -440,7 +436,7 @@ fn render_json_output(snap: &Snapshot, diff: Option<&SnapshotDiff>) -> Result<St
         json.push_str(&d.modified.iter().map(|f| format!("\"{}\"", f)).collect::<Vec<_>>().join(", "));
         json.push_str("]\n");
     } else {
-        json.push_str(&format!("  \"changes\": null\n"));
+        json.push_str("  \"changes\": null\n");
     }
 
     json.push_str("}\n");

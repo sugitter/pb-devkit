@@ -1,17 +1,17 @@
-/// pb-devkit CLI — `migrate` command
-///
-/// Migrate a PowerBuilder EXE/PBL project to an Angular web scaffold.
-///
-/// Generates:
-///   - Angular components (one per Window: .ts + .html + .scss)
-///   - TypeScript model interfaces (one per DataWindow)
-///   - Angular Reactive Form factories (for DW columns)
-///   - Injectable service stubs (one per global function)
-///   - AppRoutingModule with all Window routes
-///   - MIGRATION.md with effort estimates and checklist
-///
-/// Usage:
-///   pbdevkit migrate <source> [OPTIONS]
+//! pb-devkit CLI — `migrate` command
+//!
+//! Migrate a PowerBuilder EXE/PBL project to an Angular web scaffold.
+//!
+//! Generates:
+//!   - Angular components (one per Window: .ts + .html + .scss)
+//!   - TypeScript model interfaces (one per DataWindow)
+//!   - Angular Reactive Form factories (for DW columns)
+//!   - Injectable service stubs (one per global function)
+//!   - AppRoutingModule with all Window routes
+//!   - MIGRATION.md with effort estimates and checklist
+//!
+//! Usage:
+//!   pbdevkit migrate <source> [OPTIONS]
 
 use std::fs;
 use std::path::{Path, PathBuf};

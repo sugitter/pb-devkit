@@ -36,9 +36,9 @@ pub fn run_review(args: &[String]) -> Result<String, String> {
         .map(PathBuf::from);
 
     let mut log = Vec::<String>::new();
-    log.push(format!("================================================================="));
-    log.push(format!("  pb review — PowerBuilder Project Review"));
-    log.push(format!("================================================================="));
+    log.push("=================================================================".to_string());
+    log.push("  pb review — PowerBuilder Project Review".to_string());
+    log.push("=================================================================".to_string());
     log.push(format!("  Target: {}", target.display()));
     log.push(String::new());
 
@@ -103,12 +103,12 @@ pub fn run_review(args: &[String]) -> Result<String, String> {
 
     log.push(String::new());
     log.push(format!("  Report written: {}", out.display()));
-    log.push(format!("================================================================="));
+    log.push("=================================================================".to_string());
     log.push(format!(
         "  Summary: {} objects | {} quality findings | {} DataWindows | {} tables",
         project.total_objects, quality.total_findings, dw.total, dw.tables_usage.len()
     ));
-    log.push(format!("================================================================="));
+    log.push("=================================================================".to_string());
 
     if use_json {
         // Return simple JSON summary
@@ -285,8 +285,7 @@ fn walk_source_files(src_root: &Path, dir: &Path, info: &mut ProjectInfo) {
                     .map(|c| c.as_os_str().to_string_lossy().to_string())
                     .unwrap_or_else(|| "(root)".to_string());
 
-                let has_ext = pbl_name.contains('.');
-                let pbl_label = if has_ext { pbl_name } else { pbl_name };
+                let pbl_label = pbl_name;
                 let pbl_entry = info.pbl_object_counts.entry(pbl_label).or_default();
                 *pbl_entry.entry(otype.to_string()).or_insert(0) += 1;
 
@@ -444,12 +443,12 @@ fn analyze_datawindows(src_dir: &Path) -> DwReport {
     report
 }
 
-fn walk_dw(src_root: &Path, dir: &Path, report: &mut DwReport) {
+fn walk_dw(_src_root: &Path, dir: &Path, report: &mut DwReport) {
     if let Ok(rd) = fs::read_dir(dir) {
         for entry in rd.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                walk_dw(src_root, &path, report);
+                walk_dw(_src_root, &path, report);
                 continue;
             }
             let ext = path.extension()
@@ -511,7 +510,7 @@ fn parse_dw_source(name: &str, content: &str) -> DwInfo {
     // FROM clause in SQL (simple)
     if let Some(from_pos) = content.to_uppercase().find("FROM ") {
         let rest = &content[from_pos + 5..];
-        let end = rest.find(|c: char| c == '\n' || c == '\r' || c == '"')
+        let end = rest.find(['\n', '\r', '"'])
             .unwrap_or(rest.len().min(80));
         for word in rest[..end].split(|c: char| !c.is_alphanumeric() && c != '_') {
             let w = word.trim().to_string();
@@ -768,7 +767,7 @@ fn render_markdown(proj: &ProjectInfo, quality: &QualityReport,
 
         out.push_str("### 数据库表使用频率\n\n| 表名 | 引用 DW 数 |\n|------|----------|\n");
         let mut tbl_list: Vec<(&String, &Vec<String>)> = dw.tables_usage.iter().collect();
-        tbl_list.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+        tbl_list.sort_by_key(|b| std::cmp::Reverse(b.1.len()));
         for (tbl, dws) in tbl_list.iter().take(30) {
             out.push_str(&format!("| `{}` | {} |\n", tbl, dws.len()));
         }

@@ -308,7 +308,7 @@ fn render_text(findings: &[Finding]) -> String {
     }
     out.push_str("By rule:\n");
     let mut rules: Vec<(&str, usize)> = by_rule.into_iter().collect();
-    rules.sort_by(|a, b| b.1.cmp(&a.1));
+    rules.sort_by_key(|b| std::cmp::Reverse(b.1));
     for (rule, count) in &rules {
         out.push_str(&format!("  {}: {}\n", rule, count));
     }

@@ -118,9 +118,9 @@ impl PblVersion {
             // Check version string at offset 4-8
             let version_str_owned = String::from_utf8_lossy(&header[4..12]);
             let version_str = version_str_owned.trim_end_matches('\0');
-            if version_str.starts_with("PB") {
-                if let Ok(v) = version_str[2..].parse::<f32>() {
-                    if v >= 5.0 && v < 10.0 {
+            if let Some(v_str) = version_str.strip_prefix("PB") {
+                if let Ok(v) = v_str.parse::<f32>() {
+                    if (5.0..10.0).contains(&v) {
                         return (PblVersion::Pb5, true);
                     }
                 }
@@ -144,8 +144,7 @@ impl PblVersion {
         let version_str = version_str.trim_end_matches('\0');
 
         // Try to parse version from string like "PB12.5" or "PB10"
-        if version_str.starts_with("PB") {
-            let rest = &version_str[2..];
+        if let Some(rest) = version_str.strip_prefix("PB") {
             // Handle versions like "12", "12.5", "12.6"
             if let Some(dot_pos) = rest.find('.') {
                 if let Ok(major) = rest[..dot_pos].parse::<i32>() {
@@ -638,7 +637,7 @@ pub fn format_timestamp(secs: u32) -> String {
         [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     };
     let mut month = 1;
-    let mut rem = days_left as i64;
+    let mut rem = days_left;
     for &md in month_days.iter() {
         if rem < md {
             break;

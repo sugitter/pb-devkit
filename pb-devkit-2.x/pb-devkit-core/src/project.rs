@@ -427,7 +427,7 @@ pub fn pack_sources_to_pbl(src_dir: &str, output_pbl: &str) -> Result<PackResult
 
     // Resolve output .pbl path
     let out = Path::new(output_pbl);
-    let output_path = if out.extension().map_or(false, |e| e == "pbl") {
+    let output_path = if out.extension().is_some_and(|e| e == "pbl") {
         out.to_path_buf()
     } else {
         let src_name = src_path.file_name()

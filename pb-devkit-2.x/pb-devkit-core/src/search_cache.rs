@@ -2,7 +2,9 @@
 // v2.1+: Supports cache invalidation, TTL, LRU eviction
 
 use std::collections::HashMap;
+use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 /// Cache entry for a single search query
@@ -40,7 +42,7 @@ impl SearchCache {
     fn make_key(query: &str, root_path: &str, case_sensitive: bool, file_types: &[String]) -> String {
         let mut key = format!("{}|{}|{}", query, root_path, case_sensitive);
         if !file_types.is_empty() {
-            key.push_str("|");
+            key.push('|');
             key.push_str(&file_types.join(","));
         }
         // Simple hash for key (not cryptographic, just for mapping)
@@ -166,9 +168,41 @@ pub struct CacheStats {
     pub hit_rate: f64,
 }
 
-/// Global cache instance (lazy initialized)
-use std::sync::Mutex;
-use once_cell::sync::Lazy;
+static SEARCH_CACHE: Lazy<Mutex<SearchCache>> = Lazy::new(|| {
+    Mutex::new(SearchCache::new(100, 3600)) // 100 entries, 1 hour TTL
+});
+
+/// Get cached search results
+pub fn get_cached_search(query: &str, root_path: &str, case_sensitive: bool, file_types: &[String]) -> Option<String> {
+    let mut cache = SEARCH_CACHE.lock().ok()?;
+    cache.get(query, root_path, case_sensitive, file_types)
+}
+
+/// Cache search results
+pub fn cache_search(query: &str, root_path: &str, case_sensitive: bool, file_types: &[String], result_json: &str) {
+    if let Ok(mut cache) = SEARCH_CACHE.lock() {
+        cache.put(query, root_path, case_sensitive, file_types, result_json);
+    }
+}
+
+/// Invalidate cache for a path
+pub fn invalidate_path(root_path: &str) {
+    if let Ok(mut cache) = SEARCH_CACHE.lock() {
+        cache.invalidate_path(root_path);
+    }
+}
+
+/// Clear all cache
+pub fn clear_cache() {
+    if let Ok(mut cache) = SEARCH_CACHE.lock() {
+        cache.clear();
+    }
+}
+
+/// Get cache statistics
+pub fn get_cache_stats() -> Option<CacheStats> {
+    SEARCH_CACHE.lock().ok().map(|c| c.stats())
+}
 
 #[cfg(test)]
 mod tests {
@@ -378,40 +412,4 @@ mod tests {
         clear_cache();
         assert!(get_cached_search("q", "/tmp", false, &[]).is_none());
     }
-}
-
-static SEARCH_CACHE: Lazy<Mutex<SearchCache>> = Lazy::new(|| {
-    Mutex::new(SearchCache::new(100, 3600)) // 100 entries, 1 hour TTL
-});
-
-/// Get cached search results
-pub fn get_cached_search(query: &str, root_path: &str, case_sensitive: bool, file_types: &[String]) -> Option<String> {
-    let mut cache = SEARCH_CACHE.lock().ok()?;
-    cache.get(query, root_path, case_sensitive, file_types)
-}
-
-/// Cache search results
-pub fn cache_search(query: &str, root_path: &str, case_sensitive: bool, file_types: &[String], result_json: &str) {
-    if let Ok(mut cache) = SEARCH_CACHE.lock() {
-        cache.put(query, root_path, case_sensitive, file_types, result_json);
-    }
-}
-
-/// Invalidate cache for a path
-pub fn invalidate_path(root_path: &str) {
-    if let Ok(mut cache) = SEARCH_CACHE.lock() {
-        cache.invalidate_path(root_path);
-    }
-}
-
-/// Clear all cache
-pub fn clear_cache() {
-    if let Ok(mut cache) = SEARCH_CACHE.lock() {
-        cache.clear();
-    }
-}
-
-/// Get cache statistics
-pub fn get_cache_stats() -> Option<CacheStats> {
-    SEARCH_CACHE.lock().ok().map(|c| c.stats())
 }

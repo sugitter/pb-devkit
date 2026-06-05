@@ -240,8 +240,8 @@ fn parse_table_name(s: &str) -> String {
                 let name = s[1..end].to_string();
                 // Check for schema.table format: [schema].[table]
                 let rest = &s[end+1..].trim_start();
-                if rest.starts_with('.') {
-                    let rest = &rest[1..].trim_start();
+                if let Some(rest_stripped) = rest.strip_prefix('.') {
+                let rest = rest_stripped.trim_start();
                     if let Some('[') = rest.chars().next() {
                         if let Some(end) = rest.find(']') {
                             return format!("{}.{}", name, &rest[1..end]);
@@ -261,9 +261,7 @@ fn parse_table_name(s: &str) -> String {
         _ => {
             let mut result = String::new();
             for (_, c) in s.char_indices() {
-                if c == '.' && !result.is_empty() {
-                    result.push(c);
-                } else if c.is_alphanumeric() || c == '_' {
+                if (c == '.' && !result.is_empty()) || c.is_alphanumeric() || c == '_' {
                     result.push(c);
                 } else {
                     break;
@@ -305,7 +303,7 @@ fn extract_columns(content: &str) -> Vec<String> {
                 }
             } else {
                 // Unquoted: extract until ), \n, comma, or end
-                let end = content[actual_pos..].find(|c: char| c == ')' || c == '\n' || c == ',')
+                let end = content[actual_pos..].find([')', '\n', ','])
                     .unwrap_or(content.len() - actual_pos);
                 let col_name = content[actual_pos..actual_pos + end].trim();
                 if !col_name.is_empty() {

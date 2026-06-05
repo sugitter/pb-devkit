@@ -509,6 +509,42 @@ impl PeParser {
     }
 }
 
+/// Format PE COFF timestamp as a readable string
+fn format_rfc2822(secs: u32) -> String {
+    let s = secs as i64;
+    let mut year = 1970;
+    let mut days_left = s / 86400;
+    loop {
+        let days_in_year = if (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0) { 366 } else { 365 };
+        if days_left < days_in_year {
+            break;
+        }
+        days_left -= days_in_year;
+        year += 1;
+    }
+    let month_days = if (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0) {
+        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    } else {
+        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    };
+    let mut month = 1;
+    let mut rem = days_left;
+    for &md in month_days.iter() {
+        if rem < md {
+            break;
+        }
+        rem -= md;
+        month += 1;
+    }
+    let day = rem + 1;
+    let r = s % 86400;
+    let hours = r / 3600;
+    let minutes = (r % 3600) / 60;
+    let seconds = r % 60;
+    format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02} UTC",
+        year, month, day, hours, minutes, seconds)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -595,7 +631,7 @@ mod tests {
             let copy_len = name_bytes.len().min(8);
             sec[..copy_len].copy_from_slice(&name_bytes[..copy_len]);
             // VirtualSize = raw_data.len() rounded to 0x1000
-            let vsize = ((data.len() + 0xFFF) / 0x1000 * 0x1000) as u32;
+            let vsize = data.len().div_ceil(0x1000) as u32 * 0x1000;
             sec[8]  = (vsize & 0xFF) as u8;
             sec[9]  = ((vsize >> 8) & 0xFF) as u8;
             sec[10] = ((vsize >> 16) & 0xFF) as u8;
@@ -858,7 +894,7 @@ mod tests {
     fn test_register_pbl_deduplication() {
         // If HDR* is found both by appended scan AND rsrc scan,
         // only one registration should occur.
-        let _gap = vec![0u8; 4];
+        let _gap = [0u8; 4];
         // Place HDR* in both appended area and .rsrc section at same file offset
         // (impossible in real PE, but tests dedup logic)
         let rsrc_data = b"HDR*\x01\x00\x02\x00".to_vec();
@@ -1050,40 +1086,4 @@ mod tests {
         assert_eq!(result.embedded_pbl_count, 1);
         assert!(result.is_pb_exe);
     }
-}
-
-/// Format PE COFF timestamp as a readable string
-fn format_rfc2822(secs: u32) -> String {
-    let s = secs as i64;
-    let mut year = 1970;
-    let mut days_left = s / 86400;
-    loop {
-        let days_in_year = if (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0) { 366 } else { 365 };
-        if days_left < days_in_year {
-            break;
-        }
-        days_left -= days_in_year;
-        year += 1;
-    }
-    let month_days = if (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0) {
-        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    } else {
-        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    };
-    let mut month = 1;
-    let mut rem = days_left as i64;
-    for &md in month_days.iter() {
-        if rem < md {
-            break;
-        }
-        rem -= md;
-        month += 1;
-    }
-    let day = rem + 1;
-    let r = s % 86400;
-    let hours = r / 3600;
-    let minutes = (r % 3600) / 60;
-    let seconds = r % 60;
-    format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02} UTC",
-        year, month, day, hours, minutes, seconds)
 }

@@ -203,6 +203,8 @@ impl PeParser {
         file.seek(SeekFrom::Start(sections_start))?;
 
         let mut max_section_end: u64 = 0;
+        // Collect sections first, then resolve .rsrc RVA → raw offset (avoid borrow issues)
+        let mut sections: Vec<(u64, u64, u64, String)> = Vec::new();
 
         for _ in 0..num_sections {
             let mut section = [0u8; 40];
@@ -214,21 +216,44 @@ impl PeParser {
                 &raw_name[..raw_name.iter().position(|&b| b == 0).unwrap_or(8)]
             );
 
-            let raw_offset = u32::from_le_bytes([section[20], section[21], section[22], section[23]]) as u64;
-            let raw_size   = u32::from_le_bytes([section[16], section[17], section[18], section[19]]) as u64;
+            let virtual_address = u32::from_le_bytes([section[12], section[13], section[14], section[15]]) as u64;
+            let raw_offset       = u32::from_le_bytes([section[20], section[21], section[22], section[23]]) as u64;
+            let raw_size         = u32::from_le_bytes([section[16], section[17], section[18], section[19]]) as u64;
 
-            // Match .rsrc section by name to resolve RVA → raw offset
-            if let Some((_rva, _)) = self.rsrc_bounds {
-                if sec_name.starts_with(".rsrc") || sec_name.starts_with("rsrc") {
-                    self.rsrc_bounds = Some((raw_offset, raw_size));
-                }
-            }
+            sections.push((virtual_address, raw_offset, raw_size, sec_name.to_string()));
 
             if raw_offset > 0 && raw_size > 0 {
                 let end = raw_offset + raw_size;
                 if end > max_section_end {
                     max_section_end = end;
                 }
+            }
+        }
+
+        // ── Resolve .rsrc section: prefer RVA match, fallback to name match ──
+        if let Some((rsrc_rva, _rsrc_size)) = self.rsrc_bounds {
+            let mut matched_raw = None;
+            // Prefer: VirtualAddress == rsrc_rva
+            for (va, off, sz, _) in &sections {
+                if *va == rsrc_rva {
+                    matched_raw = Some((*off, *sz));
+                    break;
+                }
+            }
+            // Fallback: match by section name
+            if matched_raw.is_none() {
+                for (_, off, sz, name) in &sections {
+                    if name.starts_with(".rsrc") || name.starts_with("rsrc") {
+                        matched_raw = Some((*off, *sz));
+                        break;
+                    }
+                }
+            }
+            if let Some((off, sz)) = matched_raw {
+                self.rsrc_bounds = Some((off, sz));
+            } else {
+                // Could not resolve RVA → keep (rsrc_rva, rsrc_size) but mark as unresolved
+                // scan_rsrc_section will fail silently (offset may be wrong)
             }
         }
 
@@ -254,8 +279,8 @@ impl PeParser {
     ///
     /// PB compilers append the PBL data starting at `sections_end_offset`.
     /// If a digital certificate is present, the PBL sits between sections_end
-    /// and `security_offset`. We scan the gap with a 64 KiB buffer scanning
-    /// at 512-byte alignment matching typical PBL block sizes.
+    /// and `security_offset`. We scan the gap in 64 KiB chunks to handle
+    /// PB 10+ alignment and large gaps.
     fn scan_appended_hdr(&mut self, file: &mut File) -> Result<(), PeError> {
         let file_size = file.metadata()?.len();
         let scan_start = self.sections_end_offset;
@@ -272,52 +297,62 @@ impl PeParser {
             return Ok(());
         }
 
-        file.seek(SeekFrom::Start(scan_start))?;
-        // Read up to 64 KiB — larger than 4 KiB to handle PB 10+ alignment
-        let buf_size = std::cmp::min(gap_size, 65536) as usize;
-        let mut buffer = vec![0u8; buf_size];
-        let n = file.read(&mut buffer)?;
-        let check_len = std::cmp::min(n, gap_size as usize);
+        // Scan the entire gap in 64 KiB chunks
+        let chunk_size: usize = 65536;
+        let mut chunk_offset: u64 = 0;
 
-        // Fast path: exact offset (most common for older PB versions)
-        if check_len >= 4 && &buffer[0..4] == HDR_MAGIC {
-            let pbl_size = file_size - scan_start;
-            self.register_pbl(scan_start, pbl_size);
-            return Ok(());
-        }
+        while chunk_offset < gap_size {
+            let this_chunk = std::cmp::min(gap_size - chunk_offset, chunk_size as u64) as usize;
+            let mut buffer = vec![0u8; this_chunk];
+            file.seek(SeekFrom::Start(scan_start + chunk_offset))?;
+            let n = file.read(&mut buffer)?;
+            if n < 4 {
+                break;
+            }
+            let check_len = n;
 
-        // Scan in 512-byte-aligned blocks (PBL block alignment)
-        let step = 512;
-        let mut offset = step;
-        while offset + 4 <= check_len {
-            if &buffer[offset..offset + 4] == HDR_MAGIC {
-                let abs_offset = scan_start + offset as u64;
-                let pbl_size = file_size - abs_offset;
-                // If certificate is present, clamp PBL size to certificate boundary
-                let pbl_size = if let Some(cert_off) = self.security_offset {
-                    if cert_off > abs_offset { cert_off - abs_offset } else { pbl_size }
-                } else {
-                    pbl_size
-                };
-                self.register_pbl(abs_offset, pbl_size);
+            // Fast path: exact offset (most common for older PB versions)
+            if chunk_offset == 0 && check_len >= 4 && &buffer[0..4] == HDR_MAGIC {
+                let pbl_size = file_size - scan_start;
+                self.register_pbl(scan_start, pbl_size);
                 return Ok(());
             }
-            offset += step;
-        }
 
-        // Byte-granular scan over remaining gap
-        for i in 0..check_len.saturating_sub(3) {
-            if &buffer[i..i + 4] == HDR_MAGIC {
-                let abs_offset = scan_start + i as u64;
-                let pbl_size = file_size - abs_offset;
-                let pbl_size = if let Some(cert_off) = self.security_offset {
-                    if cert_off > abs_offset { cert_off - abs_offset } else { pbl_size }
-                } else {
-                    pbl_size
-                };
-                self.register_pbl(abs_offset, pbl_size);
-                return Ok(());
+            // Scan in 512-byte-aligned blocks (PBL block alignment)
+            let step = 512;
+            let start = if chunk_offset == 0 { step } else { 0 };
+            let mut offset = start;
+            while offset + 4 <= check_len {
+                if &buffer[offset..offset + 4] == HDR_MAGIC {
+                    let abs_offset = scan_start + chunk_offset + offset as u64;
+                    let pbl_size = file_size - abs_offset;
+                    let pbl_size = if let Some(cert_off) = self.security_offset {
+                        if cert_off > abs_offset { cert_off - abs_offset } else { pbl_size }
+                    } else {
+                        pbl_size
+                    };
+                    self.register_pbl(abs_offset, pbl_size);
+                    return Ok(());
+                }
+                offset += step;
             }
+
+            // Byte-granular scan over remaining chunk (scan from 0 in each chunk)
+            for i in 0..check_len.saturating_sub(3) {
+                if &buffer[i..i + 4] == HDR_MAGIC {
+                    let abs_offset = scan_start + chunk_offset + i as u64;
+                    let pbl_size = file_size - abs_offset;
+                    let pbl_size = if let Some(cert_off) = self.security_offset {
+                        if cert_off > abs_offset { cert_off - abs_offset } else { pbl_size }
+                    } else {
+                        pbl_size
+                    };
+                    self.register_pbl(abs_offset, pbl_size);
+                    return Ok(());
+                }
+            }
+
+            chunk_offset += n as u64;
         }
 
         Ok(())
@@ -327,6 +362,7 @@ impl PeParser {
     ///
     /// PB 10+ single-EXE compilers sometimes embed PBL inside the resource section
     /// as a custom binary resource. The PBL still starts with HDR* magic.
+    /// Scans the ENTIRE .rsrc section in 64 KiB chunks (PB PBL can be deep).
     fn scan_rsrc_section(&mut self, file: &mut File) -> Result<(), PeError> {
         let (rsrc_offset, rsrc_size) = match self.rsrc_bounds {
             Some(b) => b,
@@ -338,20 +374,32 @@ impl PeParser {
             return Ok(());
         }
 
-        let read_size = std::cmp::min(rsrc_size, 65536) as usize;
-        file.seek(SeekFrom::Start(rsrc_offset))?;
-        let mut buffer = vec![0u8; read_size];
-        let n = file.read(&mut buffer)?;
+        // Scan entire .rsrc section in 64 KiB chunks
+        let mut offset = rsrc_offset;
+        let end = rsrc_offset + rsrc_size;
+        let chunk_size: usize = 65536;
 
-        // Scan byte-granular inside .rsrc
-        let check_len = std::cmp::min(n, rsrc_size as usize);
-        for i in 0..check_len.saturating_sub(3) {
-            if &buffer[i..i + 4] == HDR_MAGIC {
-                let abs_offset = rsrc_offset + i as u64;
-                let pbl_size = file_size - abs_offset;
-                self.register_pbl(abs_offset, pbl_size);
-                return Ok(());
+        while offset < end {
+            let remaining = end - offset;
+            let this_chunk = std::cmp::min(remaining, chunk_size as u64) as usize;
+            let mut buffer = vec![0u8; this_chunk];
+            file.seek(SeekFrom::Start(offset))?;
+            let n = file.read(&mut buffer)?;
+            if n < 4 {
+                break;
             }
+
+            let check_len = n;
+            for i in 0..check_len.saturating_sub(3) {
+                if &buffer[i..i + 4] == HDR_MAGIC {
+                    let abs_offset = offset + i as u64;
+                    let pbl_size = file_size - abs_offset;
+                    self.register_pbl(abs_offset, pbl_size);
+                    return Ok(());
+                }
+            }
+
+            offset += n as u64;
         }
 
         Ok(())

@@ -1,5 +1,15 @@
 # PB DevKit 2.x 开发进度
 
+## ✅ 已完成 (v2.2.1) - 2026-06-06 更新
+
+### 本次更新 (2026-06-06)
+- [x] 修复 F: 盘 git HEAD（refs/heads/main 指向无效对象）
+- [x] 同步本地工作区与远程最新 commit（670653e）
+- [x] 删除脚手架残留文件：`app.component.html` 和 `app.component.css`（已通过 git 提交移除）
+- [x] 推送到 Gitea (origin) 和 GitHub，两端均同步至 `670653e`
+
+---
+
 ## ✅ 已完成 (v2.2.1) - 2026-06-04 更新
 
 ### 本次更新 (2026-06-04)
@@ -17,8 +27,7 @@
 - [x] 测试体系补强（111 新测试：PE 14 + PBL 17 + DW 30 + Project 21 + Search 22 + Decompile 7）— 项目测试从 3→114
 - [x] CI/CD 增强（`.github/workflows/ci.yml`）— 新增 clippy/fmt/audit + Windows builder + Node 22
 - [x] `Cargo.toml` 清理 — `tempfile` 从 `[dependencies]` 移至 `[dev-dependencies]`
-- [x] 清理脚手架残留文件：`app.component.html` 和 `app.component.css`（未被引用，各仅 1 行）
-  > ⚠️ 需手动删除，sandbox 被 D/F 盘限制
+- [x] 清理脚手架残留文件：`app.component.html` 和 `app.component.css` ✅ 已通过 git 删除
 
 ---
 

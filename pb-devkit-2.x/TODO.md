@@ -4,9 +4,14 @@
 
 ### 本次更新 (2026-06-06)
 - [x] 修复 F: 盘 git HEAD（refs/heads/main 指向无效对象）
-- [x] 同步本地工作区与远程最新 commit（670653e）
+- [x] 同步本地工作区与远程最新 commit（`1b97b90`）
 - [x] 删除脚手架残留文件：`app.component.html` 和 `app.component.css`（已通过 git 提交移除）
-- [x] 推送到 Gitea (origin) 和 GitHub，两端均同步至 `670653e`
+- [x] 推送到 Gitea (origin) 和 GitHub，两端均同步至 `1b97b90`
+- [x] 修复 `pb-devkit-core/Cargo.toml` 版本号不一致（2.1.0 → 2.2.1）
+- [x] 同步 `Cargo.lock`（core + cli）版本号至 2.2.1
+- [x] 创建 `CHANGELOG.md`（中英双语，遵循 Keep a Changelog 格式）
+- [x] 新增 CLI `#[cfg(test)] mod tests` — main.rs 含 2 个占位测试
+- [x] 199/199 测试全部通过，clippy 0 warnings
 
 ---
 

@@ -4,6 +4,10 @@ version = "2.2.1"
 edition = "2021"
 description = "PB DevKit CLI - PowerBuilder Legacy System Toolkit"
 
+[lib]
+name = "pb_devkit_cli"
+path = "src/lib.rs"
+
 [[bin]]
 name = "pbdevkit"
 path = "src/main.rs"

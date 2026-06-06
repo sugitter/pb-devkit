@@ -1,282 +1,215 @@
-// PB DevKit CLI v2.0 - Command-line interface
-// Usage: pbdevkit <command> [args...]
-//
-// All commands delegate to pb-devkit-core.
-
-use std::env;
-use std::process;
-
-mod commands;
-use commands::{pbl_cmd, pe_cmd, project_cmd, search_cmd, dw_cmd, decompile_cmd, report_cmd, diff_cmd, workflow_cmd, refactor_cmd, snapshot_cmd, review_cmd, autoexport_cmd, migrate_cmd, build_cmd};
+// PB DevKit CLI v2.2.1 - Binary entry point
+// Delegates to pb_devkit_cli::run() (defined in lib.rs).
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-
-    if args.len() < 2 {
-        print_usage();
-        return;
-    }
-
-    let cmd = &args[1];
-
-    // Interactive mode
-    if cmd == "interactive" || cmd == "shell" || cmd == "repl" {
-        if let Err(e) = start_interactive_mode() {
-            eprintln!("Error: {}", e);
-            process::exit(1);
-        }
-        return;
-    }
-
-    let subargs: Vec<String> = args[2..].to_vec();
-    let result = execute_command(cmd, &subargs);
-
-    match result {
-        Ok(output) => println!("{}", output),
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            process::exit(1);
-        }
-    }
-}
-
-/// Execute a single CLI command. Extracted so both `main()` and
-/// `start_interactive_mode()` can share the same logic.
-fn execute_command(cmd: &str, subargs: &[String]) -> Result<String, String> {
-    match cmd {
-        // ── PBL commands ──
-        "parse" | "pbl" => pbl_cmd::parse_pbl(subargs),
-        "info" => pbl_cmd::get_pbl_info(subargs),
-        "list" => pbl_cmd::list_entries(subargs),
-        "export" => pbl_cmd::export_entry(subargs),
-        "export-pbl" => pbl_cmd::export_pbl(subargs),
-        // ── PE commands ──
-        "file-type" => pe_cmd::detect_file_type(subargs),
-        "analyze-pe" => pe_cmd::analyze_pe(subargs),
-        "extract-pbd" => pe_cmd::extract_pbd(subargs),
-        // ── Project commands ──
-        "project" | "detect" => project_cmd::detect_project(subargs),
-        "find-pbl" => project_cmd::find_pbl_files(subargs),
-        "scan-export" => project_cmd::scan_and_export(subargs),
-        "pack-to-pbl" => project_cmd::pack_sources_to_pbl(subargs),
-        "doctor" => project_cmd::run_doctor(),
-        // ── Search commands ──
-        "search" => search_cmd::search_in_files(subargs),
-        "search-type" => search_cmd::search_by_type(subargs),
-        "search-regex" => search_cmd::search_with_regex(subargs),
-        // ── DataWindow commands ──
-        "analyze-dw" => dw_cmd::analyze_datawindows(subargs),
-        "dw-sql" => dw_cmd::get_dw_sql(subargs),
-        // ── Decompile commands ──
-        "list-decompile" => decompile_cmd::list_decompile_entries(subargs),
-        "decompile" => decompile_cmd::decompile_entry(subargs),
-        "decompile-all" => decompile_cmd::decompile_all(subargs),
-        // ── Report commands ──
-        "report" => report_cmd::generate_report(subargs),
-        "export-report" => report_cmd::export_report(subargs),
-        // ── Diff command ──
-        "diff" => diff_cmd::run_diff(subargs),
-        // ── Workflow command ──
-        "workflow" => workflow_cmd::run_workflow(subargs),
-        // ── Code analysis commands ──
-        "refactor" => refactor_cmd::run_refactor(subargs),
-        "snapshot" => snapshot_cmd::run_snapshot(subargs),
-        "review" => review_cmd::run_review(subargs),
-        // ── Migration commands (ported from 1.x) ──
-        "autoexport" | "auto-export" => autoexport_cmd::run_autoexport(subargs),
-        "migrate" => migrate_cmd::run_migrate(subargs),
-        "build" => build_cmd::run_build(subargs),
-        // ── Help ──
-        "--help" | "-h" | "help" => {
-            print_usage();
-            Ok(String::new())
-        }
-        _ => Err(format!("Unknown command: {}", cmd)),
-    }
-}
-
-/// Interactive REPL mode.
-/// Supports command-line editing, history (persisted to ~/.pbdevkit_history),
-/// and the special commands: help, exit, quit, q.
-fn start_interactive_mode() -> Result<(), String> {
-    use rustyline::error::ReadlineError;
-    use rustyline::history::FileHistory;
-    use rustyline::{Config, EditMode, Editor};
-
-    let config = Config::builder()
-        .history_ignore_space(true)
-        .edit_mode(EditMode::Emacs)
-        .build();
-
-    let mut rl: Editor<(), FileHistory> = Editor::with_config(config)
-        .map_err(|e| format!("Failed to create editor: {}", e))?;
-
-    // Try to load history from ~/.pbdevkit_history
-    let history_path = dirs::home_dir().map(|mut d| {
-        d.push(".pbdevkit_history");
-        d
-    });
-    if let Some(ref p) = history_path {
-        let _ = rl.load_history(p);
-    }
-
-    println!("PB DevKit CLI v2.2.1 - Interactive Mode");
-    println!("Type 'help' for available commands, 'exit' / 'quit' / 'q' to quit.");
-    println!();
-
-    loop {
-        let readline = rl.readline("pbdevkit> ");
-        match readline {
-            Ok(line) => {
-                let trimmed: &str = line.trim();
-                if trimmed.is_empty() {
-                    continue;
-                }
-                let _ = rl.add_history_entry(trimmed);
-
-                if trimmed == "exit" || trimmed == "quit" || trimmed == "q" {
-                    println!("Goodbye!");
-                    break;
-                }
-                if trimmed == "help" || trimmed == "?" {
-                    print_usage();
-                    continue;
-                }
-
-                // Parse command + args
-                let parts: Vec<&str> = trimmed.split_whitespace().collect();
-                if parts.is_empty() {
-                    continue;
-                }
-                let cmd = parts[0];
-                let subargs: Vec<String> = parts[1..]
-                    .iter()
-                    .map(|s: &&str| s.to_string())
-                    .collect();
-
-                match execute_command(cmd, &subargs) {
-                    Ok(output) => println!("{}", output),
-                    Err(e) => eprintln!("Error: {}", e),
-                }
-            }
-            Err(ReadlineError::Interrupted) => {
-                // Ctrl+C — just continue
-                println!("^C");
-                continue;
-            }
-            Err(ReadlineError::Eof) => {
-                // Ctrl+D
-                println!("\nGoodbye!");
-                break;
-            }
-            Err(err) => {
-                eprintln!("Error: {}", err);
-                break;
-            }
-        }
-    }
-
-    // Save history
-    if let Some(ref p) = history_path {
-        let _ = rl.save_history(p);
-    }
-
-    Ok(())
-}
-
-fn print_usage() {
-    println!("PB DevKit CLI v2.2.1");
-    println!("PowerBuilder Legacy System Toolkit");
-    println!();
-    println!("Usage: pbdevkit <command> [args...]");
-    println!();
-    println!("Commands:");
-    println!("  PBL:");
-    println!("  parse <pbl>           Parse PBL file");
-    println!("  info <pbl>            Get PBL file info");
-    println!("  list <pbl>            List all entries in PBL");
-    println!("  export <pbl> <name>   Export a single entry");
-    println!("  export-pbl <pbl> <dir> [--by-type]");
-    println!("                        Export all source entries from PBL");
-    println!();
-    println!("  PE:");
-    println!("  file-type <file>      Detect file type from magic bytes");
-    println!("  analyze-pe <file>     Analyze PE file (EXE/DLL)");
-    println!("  extract-pbd <exe> <dir>");
-    println!("                        Extract PBD resources from EXE/DLL");
-    println!();
-    println!("  Project:");
-    println!("  project <path>        Detect PowerBuilder project");
-    println!("  find-pbl <path>       List all PBL files recursively");
-    println!("  scan-export <path> <dir>");
-    println!("                        Scan project and export all sources");
-    println!("  pack-to-pbl <src_dir> <output.pbl>");
-    println!("                        Pack source files into a PBL");
-    println!("  doctor                 Run environment diagnostics");
-    println!();
-    println!("  Search:");
-    println!("  search <path> <query> Search in source files");
-    println!("  search-type <path> <type>");
-    println!("                        Search by object type");
-    println!("  search-regex <path> <pattern>");
-    println!("                        Search using regex pattern");
-    println!();
-    println!("  DataWindow:");
-    println!("  analyze-dw <path>     Analyze DataWindow objects");
-    println!("  dw-sql <path>         Get DataWindow SQL");
-    println!();
-    println!("  Decompile:");
-    println!("  list-decompile <file>  List entries in PBD/EXE");
-    println!("  decompile <file> <name>");
-    println!("                        Decompile a single entry");
-    println!("  decompile-all <file> <dir>");
-    println!("                        Decompile all entries");
-    println!();
-    println!("  Report:");
-    println!("  report <path>         Generate project report");
-    println!("  export-report <path> <output.json>");
-    println!("                        Export report to JSON file");
-    println!();
-    println!("  Workflow & Diff:");
-    println!("  workflow <path>       Run workflow analysis");
-    println!("  diff <a> <b>          Compare two source files or dirs");
-    println!();
-    println!("  Code Analysis:");
-    println!("  refactor <dir>        Scan source for anti-patterns and suggestions");
-    println!("  snapshot <dir>        Capture project snapshot (inventory + diff)");
-    println!("  review <dir>          Full review: structure / quality / DW / deps");
-    println!();
-    println!("  Migration:");
-    println!("  autoexport <dir>      Auto-detect project type and export all sources");
-    println!("  migrate <source>      Migrate PB EXE/PBL to Angular web scaffold");
-    println!("  build <pbl> <app>     Rebuild PB application via PBGen.exe");
-    println!();
-    println!("  Interactive mode:");
-    println!("  interactive            Start interactive REPL mode");
-    println!();
-    println!("Examples:");
-    println!("  pbdevkit parse myapp.pbl");
-    println!("  pbdevkit list myapp.pbl");
-    println!("  pbdevkit project C:/projects/myapp");
-    println!("  pbdevkit search C:/projects/myapp dw_");
-    println!("  pbdevkit analyze-pe myapp.exe");
-    println!("  pbdevkit interactive");
+    pb_devkit_cli::run();
 }
 
 #[cfg(test)]
 mod tests {
+    use pb_devkit_cli::execute_command;
+
+    // ── Help / Usage ──
+
     #[test]
-    fn verify_command_modules_linked() {
-        // This test verifies all command modules compile correctly.
-        // Each `use commands::*_cmd` at the top of main.rs must resolve.
-        assert!(true);
+    fn help_command_returns_usage() {
+        let result = execute_command("help", &[]);
+        assert!(result.is_ok(), "help should succeed");
+        let output = result.unwrap();
+        assert!(output.contains("PB DevKit CLI"), "usage should contain brand");
+        assert!(output.contains("pbdevkit"), "usage should contain binary name");
+        assert!(output.contains("parse"), "usage should list parse command");
+        assert!(output.contains("doctor"), "usage should list doctor command");
     }
 
     #[test]
-    fn cli_prints_usage_when_no_args() {
-        // Capture stdout when running with no args — should print usage
-        // (Cannot easily capture since main() calls println! directly;
-        //  this test at least verifies the code compiles in test mode.)
-        assert!(true);
+    fn dash_help_alias_works() {
+        let result = execute_command("--help", &[]);
+        assert!(result.is_ok());
+        assert!(result.unwrap().contains("Usage:"));
+    }
+
+    #[test]
+    fn dash_h_alias_works() {
+        let result = execute_command("-h", &[]);
+        assert!(result.is_ok());
+        assert!(result.unwrap().contains("pbdevkit"));
+    }
+
+    // ── Unknown command ──
+
+    #[test]
+    fn unknown_command_returns_error() {
+        let result = execute_command("nonexistent_cmd", &[]);
+        assert!(result.is_err(), "unknown command should fail");
+        assert!(result.unwrap_err().contains("Unknown command"));
+    }
+
+    // ── Doctor (no args needed) ──
+
+    #[test]
+    fn doctor_returns_result() {
+        let result = execute_command("doctor", &[]);
+        match result {
+            Ok(output) => {
+                assert!(!output.is_empty(), "doctor output should not be empty");
+            }
+            Err(_) => {
+                // Doctor may fail in CI if PB tools are not installed. That's OK.
+            }
+        }
+    }
+
+    // ── Command routing completeness ──
+
+    #[test]
+    fn all_pbl_commands_route() {
+        for cmd in &["parse", "info", "list", "export", "export-pbl"] {
+            let result = execute_command(cmd, &["missing.pbl".to_string()]);
+            // Should fail with "No such file" or similar, NOT "Unknown command"
+            match result {
+                Ok(_) => {}
+                Err(e) => assert!(!e.contains("Unknown command"),
+                    "{} should route to a handler, got: {}", cmd, e),
+            }
+        }
+    }
+
+    #[test]
+    fn all_pe_commands_route() {
+        for cmd in &["file-type", "analyze-pe", "extract-pbd"] {
+            let result = execute_command(cmd, &["missing.exe".to_string()]);
+            match result {
+                Ok(_) => {}
+                Err(e) => assert!(!e.contains("Unknown command"),
+                    "{} should route to a handler, got: {}", cmd, e),
+            }
+        }
+    }
+
+    #[test]
+    fn all_project_commands_route() {
+        for cmd in &["project", "find-pbl", "scan-export"] {
+            let result = execute_command(cmd, &["/nonexistent".to_string()]);
+            match result {
+                Ok(_) => {}
+                Err(e) => assert!(!e.contains("Unknown command"),
+                    "{} should route to a handler, got: {}", cmd, e),
+            }
+        }
+    }
+
+    #[test]
+    fn all_search_commands_route() {
+        for cmd in &["search", "search-type", "search-regex"] {
+            let result = execute_command(cmd, &["/nonexistent".to_string(), "dummy".to_string()]);
+            match result {
+                Ok(_) => {}
+                Err(e) => assert!(!e.contains("Unknown command"),
+                    "{} should route to a handler, got: {}", cmd, e),
+            }
+        }
+    }
+
+    #[test]
+    fn all_dw_commands_route() {
+        for cmd in &["analyze-dw", "dw-sql"] {
+            let result = execute_command(cmd, &["/nonexistent".to_string()]);
+            match result {
+                Ok(_) => {}
+                Err(e) => assert!(!e.contains("Unknown command"),
+                    "{} should route to a handler, got: {}", cmd, e),
+            }
+        }
+    }
+
+    #[test]
+    fn all_decompile_commands_route() {
+        for cmd in &["list-decompile", "decompile", "decompile-all"] {
+            let result = execute_command(cmd, &["missing.pbd".to_string()]);
+            match result {
+                Ok(_) => {}
+                Err(e) => assert!(!e.contains("Unknown command"),
+                    "{} should route to a handler, got: {}", cmd, e),
+            }
+        }
+    }
+
+    #[test]
+    fn all_report_commands_route() {
+        for cmd in &["report", "export-report"] {
+            let result = execute_command(cmd, &["/nonexistent".to_string()]);
+            match result {
+                Ok(_) => {}
+                Err(e) => assert!(!e.contains("Unknown command"),
+                    "{} should route to a handler, got: {}", cmd, e),
+            }
+        }
+    }
+
+    #[test]
+    fn all_code_analysis_commands_route() {
+        for cmd in &["diff", "workflow", "refactor", "snapshot", "review"] {
+            let result = execute_command(cmd, &["/nonexistent".to_string()]);
+            match result {
+                Ok(_) => {}
+                Err(e) => assert!(!e.contains("Unknown command"),
+                    "{} should route to a handler, got: {}", cmd, e),
+            }
+        }
+    }
+
+    #[test]
+    fn all_migration_commands_route() {
+        for cmd in &["autoexport", "auto-export", "migrate", "build"] {
+            let result = execute_command(cmd, &["/nonexistent".to_string()]);
+            match result {
+                Ok(_) => {}
+                Err(e) => assert!(!e.contains("Unknown command"),
+                    "{} should route to a handler, got: {}", cmd, e),
+            }
+        }
+    }
+
+    #[test]
+    fn pack_to_pbl_command_routes() {
+        let result = execute_command("pack-to-pbl", &["/nonexistent".to_string(), "/out.pbl".to_string()]);
+        match result {
+            Ok(_) => {}
+            Err(e) => assert!(!e.contains("Unknown command"),
+                "pack-to-pbl should route to a handler, got: {}", e),
+        }
+    }
+
+    // ── Total command count ──
+
+    #[test]
+    fn total_30_commands_all_routable() {
+        // 30 CLI commands should all be routable via execute_command
+        let all_cmds = vec![
+            "parse", "pbl", "info", "list", "export", "export-pbl",          // 6 PBL
+            "file-type", "analyze-pe", "extract-pbd",                         // 3 PE
+            "project", "detect", "find-pbl", "scan-export", "pack-to-pbl", "doctor", // 6 Project
+            "search", "search-type", "search-regex",                          // 3 Search
+            "analyze-dw", "dw-sql",                                           // 2 DW
+            "list-decompile", "decompile", "decompile-all",                   // 3 Decompile
+            "report", "export-report",                                        // 2 Report
+            "diff", "workflow", "refactor", "snapshot", "review",            // 5 Code Analysis
+            "autoexport", "auto-export", "migrate", "build",                  // 4 Migration
+        ];
+        let routed: Vec<_> = all_cmds.iter().filter(|cmd| {
+            let subargs: Vec<String> = if **cmd == "doctor" {
+                vec![]
+            } else {
+                vec!["/nonexistent".to_string()]
+            };
+            match execute_command(cmd, &subargs) {
+                Ok(_) => true,
+                Err(e) => !e.contains("Unknown command"),
+            }
+        }).collect();
+        assert_eq!(routed.len(), all_cmds.len(),
+            "All 30 commands must be routable. Missing: {:?}",
+            all_cmds.iter().filter(|c| !routed.contains(c)).collect::<Vec<_>>());
     }
 }

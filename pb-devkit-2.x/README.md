@@ -1,4 +1,4 @@
-# PB DevKit 2.2
+# PB DevKit 2.2.1
 
 > PowerBuilder Legacy System Toolkit / PowerBuilder 遗留系统工具包
 
@@ -90,20 +90,15 @@ npm run tauri dev
 
 ### Roadmap
 
+- [x] **v2.2.0** — PE info view UI ✅
+- [x] **v2.2.0** — Project statistics panel ✅
+- [x] **v2.2.1** — autoexport/migrate/build 移植（CLI + Desktop 100%）✅
+- [x] **v2.2.1** — refactor/snapshot/review（CLI 三命令 + Desktop 三面板 100%）✅
+- [ ] **v2.2.2 (Planning)** DataWindow SQL 解析完善（嵌套查询、子查询、UNION、参数绑定）
+- [ ] **v2.2.2 (Planning)** 批量导出进度显示（CLI 进度条 + Desktop 进度 Modal）
+- [ ] **v2.2.2 (Planning)** PBL 版本检测增强（自动检测版本、区分 ANSI/Unicode、PB 12.5+）
+- [ ] **v2.2.2 (Planning)** 搜索性能优化（并行搜索、索引文件、增量搜索）
 - [ ] ORCA engine integration (requires PBSpyORCA.dll)
-- [x] PE info view UI ✅
-- [x] Project statistics panel ✅
-
-### v2.2 优化方向 (Planning)
-
-| 优先级 | 功能 | 说明 |
-|--------|------|------|
-| 🔴 高 | DataWindow SQL 解析完善 | 支持嵌套查询、子查询、UNION、参数绑定 |
-| 🔴 高 | 批量导出进度显示 | CLI 进度条 + Desktop 进度 Modal |
-| 🟡 中 | PBL 版本检测增强 | 自动检测版本、区分 ANSI/Unicode、PB 12.5+ |
-| 🟡 中 | 搜索性能优化 | 并行搜索、索引文件、增量搜索 |
-| ✅ 完成 | autoexport/migrate/build 移植 | v2.2.1 — CLI + Desktop 100% |
-| ✅ 完成 | refactor/snapshot/review | CLI 三命令 + Desktop 三面板 100% |
 
 ---
 
@@ -191,20 +186,15 @@ npm run tauri dev
 
 ### 开发计划
 
+- [x] **v2.2.0** — PE 信息视图 UI ✅
+- [x] **v2.2.0** — 项目统计面板 ✅
+- [x] **v2.2.1** — autoexport/migrate/build 移植（CLI + Desktop 100%）✅
+- [x] **v2.2.1** — refactor/snapshot/review（CLI 三命令 + Desktop 三面板 100%）✅
+- [ ] **v2.2.2 (规划中)** DataWindow SQL 解析完善（嵌套查询、子查询、UNION、参数绑定）
+- [ ] **v2.2.2 (规划中)** 批量导出进度显示（CLI 进度条 + Desktop 进度 Modal）
+- [ ] **v2.2.2 (规划中)** PBL 版本检测增强（自动检测版本、区分 ANSI/Unicode、PB 12.5+）
+- [ ] **v2.2.2 (规划中)** 搜索性能优化（并行搜索、索引文件、增量搜索）
 - [ ] ORCA 引擎集成（需要 PBSpyORCA.dll）
-- [x] PE 信息视图 UI ✅
-- [x] 项目统计面板 ✅
-
-### v2.2 优化方向
-
-| 优先级 | 功能 | 说明 |
-|--------|------|------|
-| 🔴 高 | DataWindow SQL 解析完善 | 支持嵌套查询、子查询、UNION、参数绑定 |
-| 🔴 高 | 批量导出进度显示 | CLI 进度条 + Desktop 进度 Modal |
-| 🟡 中 | PBL 版本检测增强 | 自动检测版本、区分 ANSI/Unicode、PB 12.5+ |
-| 🟡 中 | 搜索性能优化 | 并行搜索、索引文件、增量搜索 |
-| ✅ 完成 | autoexport/migrate/build 移植 | v2.2.1 — CLI + Desktop 100% |
-| ✅ 完成 | refactor/snapshot/review | CLI 三命令 + Desktop 三面板 100% |
 
 ### License / 许可证
 

@@ -67,6 +67,7 @@ pub const SOURCE_EXT_MAP: &[(&str, u8)] = &[
 // Block sizes
 const BLOCK_SIZE: u64 = 512;
 const NODE_BLOCK_SIZE: u64 = 3072; // 6 x 512
+const ENTRIES_PER_NODE: usize = 40; // Match PblWriter
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PblVersion {
@@ -299,34 +300,81 @@ impl PblParser {
         let mut file = File::open(&self.path)?;
         let file_size = file.metadata()?.len();
 
-        // Adjust all offsets by pbl_data_offset (for EXE embedded PBL)
         let base = self.pbl_data_offset;
-        let entries_start = base + self.header_size + BLOCK_SIZE + NODE_BLOCK_SIZE;
-        file.seek(SeekFrom::Start(entries_start))?;
 
-        let mut offset = entries_start;
-        let mut buffer = vec![0u8; 8192];
+        // Step 1: Read total entry count from header at offset base + header_size - 8 (u32 LE)
+        let total_entries_offset = base + self.header_size - 8;
+        if total_entries_offset + 4 > file_size {
+            return Err(PblError::InvalidFormat);
+        }
+        file.seek(SeekFrom::Start(total_entries_offset))?;
+        let mut te_buf = [0u8; 4];
+        file.read_exact(&mut te_buf)?;
+        let total_entries = u32::from_le_bytes(te_buf) as usize;
 
-        while offset < file_size - 512 {
-            file.seek(SeekFrom::Start(offset))?;
-            let bytes_read = file.read(&mut buffer)?;
-            if bytes_read < 24 {
+        if total_entries == 0 {
+            return Ok(());
+        }
+
+        // Step 2: Calculate node_count = ceil(total_entries / ENTRIES_PER_NODE)
+        let node_count = (total_entries + ENTRIES_PER_NODE - 1) / ENTRIES_PER_NODE;
+
+        // Step 3: For each node, read NOD* block and parse ENT* entries inside it
+        for node_idx in 0..node_count {
+            let nod_offset = base + self.header_size + BLOCK_SIZE + node_idx as u64 * NODE_BLOCK_SIZE;
+
+            if nod_offset + NODE_BLOCK_SIZE > file_size {
                 break;
             }
 
-            let mut i = 0;
-            while i < bytes_read - 24 {
-                if &buffer[i..i + 4] == b"ENT*" {
-                    if let Some(entry) = self.parse_ent_block(&buffer[i..], offset + i as u64) {
-                        self.entries.push(entry);
-                    }
-                    i += 512;
-                } else {
-                    i += 1;
-                }
+            file.seek(SeekFrom::Start(nod_offset))?;
+            let mut nod_block = vec![0u8; NODE_BLOCK_SIZE as usize];
+            file.read_exact(&mut nod_block)?;
+
+            // Verify NOD* magic at offset 0
+            if &nod_block[0..4] != b"NOD*" {
+                continue;
             }
 
-            offset += bytes_read as u64 - 24;
+            // Read nod_entry_count from offset 20 (u16 LE)
+            let nod_entry_count = u16::from_le_bytes([nod_block[20], nod_block[21]]) as usize;
+
+            // Start at pos = 32 (ENT* entries begin at offset 32 within NOD* block)
+            let mut pos = 32usize;
+
+            for _ in 0..nod_entry_count {
+                if pos + 4 > nod_block.len() {
+                    break;
+                }
+
+                // Verify ENT* at current position
+                if &nod_block[pos..pos + 4] != b"ENT*" {
+                    break;
+                }
+
+                // Parse the ENT* entry
+                if let Some(entry) = self.parse_ent_block(&nod_block[pos..], nod_offset + pos as u64) {
+                    self.entries.push(entry);
+                }
+
+                // Advance pos by ent_hdr_size + name_len
+                let (ent_hdr_size, name_len_offset) = if self.is_unicode {
+                    (28usize, pos + 26)
+                } else {
+                    (24usize, pos + 22)
+                };
+
+                if name_len_offset + 2 > nod_block.len() {
+                    break;
+                }
+
+                let name_len = u16::from_le_bytes([
+                    nod_block[name_len_offset],
+                    nod_block[name_len_offset + 1],
+                ]) as usize;
+
+                pos += ent_hdr_size + name_len;
+            }
         }
 
         Ok(())
@@ -666,113 +714,161 @@ mod tests {
 
     /// Build a minimal valid PBL binary (ANSI, PB9.0 format).
     /// File layout:
-    ///   0-511:    HDR* header (magic + "PB9.0" ANSI version string)
-    ///   512-1023: first data block (zeros)
-    ///   1024-4095: node block area (zeros)
-    ///   4096+:    ENT* entry blocks
+    ///   0-511:     HDR* header (magic + "PB9.0" ANSI version string)
+    ///               total_entries written at offset 504 (header_size - 8)
+    ///   512-1023:  first data block (zeros)
+    ///   1024-4095: NOD* node block (ENT* entries inside, starting at offset 32)
+    ///   0x2000+:   entry data (DAT* chunks)
     fn build_ansi_pbl(entry_name: &str) -> Vec<u8> {
-        let mut buf = vec![0u8; 512];
+        let mut buf: Vec<u8> = vec![0u8; 512];
         // HDR* magic
         buf[0] = b'H'; buf[1] = b'D'; buf[2] = b'R'; buf[3] = b'*';
         // ANSI version string "PB9.0"
-        // "PB9.0" = 5 bytes, header offset 4-8 (5 bytes inc. null)
         let version: &[u8] = b"PB9.0";
         buf[4..9].copy_from_slice(version);
 
-        // Data block (512-1023)
+        // Write total_entries = 1 at offset 504 (header_size - 8)
+        let total_entries: u32 = 1;
+        buf[504] = (total_entries & 0xFF) as u8;
+        buf[505] = ((total_entries >> 8) & 0xFF) as u8;
+        buf[506] = ((total_entries >> 16) & 0xFF) as u8;
+        buf[507] = ((total_entries >> 24) & 0xFF) as u8;
+
+        // Data block (512-1023): all zeros
         buf.extend(&[0u8; 512]);
-        // Node block (1024-4095) — BLOCK_SIZE + NODE_BLOCK_SIZE = 512 + 3072 = 3584
-        buf.extend(&[0u8; 3584]);
 
-        // Entry at offset 4096 (ENT* block)
-        // Entry format (ANSI, 24 bytes fixed + name):
-        //  0-3:  "ENT*"
-        //  4-7:  version (reserved, 4 bytes)
-        //  8-11: data_offset (u32 LE)
-        // 12-15: data_size (u32 LE)
-        // 16-19: timestamp (u32 LE)
-        // 20-21: padding
-        // 22-23: name_len (u16 LE)
-        // 24+:   name bytes (ANSI)
-        let mut ent = vec![0u8; 512];
-        ent[0] = b'E'; ent[1] = b'N'; ent[2] = b'T'; ent[3] = b'*';
-        // data_offset = 0x2000 (8192)
+        // NOD* node block at offset 1024 (header_size + BLOCK_SIZE)
+        let mut nod_block = vec![0u8; NODE_BLOCK_SIZE as usize];
+        // NOD* magic at offset 0
+        nod_block[0] = b'N'; nod_block[1] = b'O'; nod_block[2] = b'D'; nod_block[3] = b'*';
+        // nod_entry_count = 1 at offset 20 (u16 LE)
+        nod_block[20] = 1; nod_block[21] = 0;
+
+        // ENT* entry at offset 32 within NOD* block
+        let ent_start = 32usize;
+        nod_block[ent_start + 0] = b'E';
+        nod_block[ent_start + 1] = b'N';
+        nod_block[ent_start + 2] = b'T';
+        nod_block[ent_start + 3] = b'*';
+        // data_offset = 0x2000 (8192), u32 LE at offset 8
         let data_off: u32 = 0x2000;
-        ent[8]  = (data_off & 0xFF) as u8;
-        ent[9]  = ((data_off >> 8) & 0xFF) as u8;
-        // data_size = 512
+        nod_block[ent_start + 8]  = (data_off & 0xFF) as u8;
+        nod_block[ent_start + 9]  = ((data_off >> 8) & 0xFF) as u8;
+        nod_block[ent_start + 10] = ((data_off >> 16) & 0xFF) as u8;
+        nod_block[ent_start + 11] = ((data_off >> 24) & 0xFF) as u8;
+        // data_size = 512, u32 LE at offset 12
         let data_sz: u32 = 512;
-        ent[12] = (data_sz & 0xFF) as u8;
-        ent[13] = ((data_sz >> 8) & 0xFF) as u8;
-        // timestamp = 100000000 (2003-03-02-like)
+        nod_block[ent_start + 12] = (data_sz & 0xFF) as u8;
+        nod_block[ent_start + 13] = ((data_sz >> 8) & 0xFF) as u8;
+        nod_block[ent_start + 14] = ((data_sz >> 16) & 0xFF) as u8;
+        nod_block[ent_start + 15] = ((data_sz >> 24) & 0xFF) as u8;
+        // timestamp = 100000000 at offset 16 (u32 LE)
         let ts: u32 = 100_000_000;
-        ent[16] = (ts & 0xFF) as u8;
-        ent[17] = ((ts >> 8) & 0xFF) as u8;
-        ent[18] = ((ts >> 16) & 0xFF) as u8;
-        ent[19] = ((ts >> 24) & 0xFF) as u8;
-        // name_len
+        nod_block[ent_start + 16] = (ts & 0xFF) as u8;
+        nod_block[ent_start + 17] = ((ts >> 8) & 0xFF) as u8;
+        nod_block[ent_start + 18] = ((ts >> 16) & 0xFF) as u8;
+        nod_block[ent_start + 19] = ((ts >> 24) & 0xFF) as u8;
+        // name_len at offset 22 (u16 LE)
         let nlen = entry_name.len() as u16;
-        ent[22] = (nlen & 0xFF) as u8;
-        ent[23] = ((nlen >> 8) & 0xFF) as u8;
-        // name bytes
-        ent[24..24 + entry_name.len()].copy_from_slice(entry_name.as_bytes());
-        buf.extend_from_slice(&ent);
+        nod_block[ent_start + 22] = (nlen & 0xFF) as u8;
+        nod_block[ent_start + 23] = ((nlen >> 8) & 0xFF) as u8;
+        // name bytes (ANSI) at offset 24
+        nod_block[ent_start + 24..ent_start + 24 + entry_name.len()]
+            .copy_from_slice(entry_name.as_bytes());
 
-        // Pad to at least entry data area (data_offset = 0x2000 = 8192)
-        // entry offset = 4096, plus enough for entry data at 0x2000
-        while buf.len() < 0x2000 + 512 {
+        buf.extend_from_slice(&nod_block);
+
+        // Pad to data_offset (0x2000 = 8192)
+        while buf.len() < 0x2000 as usize {
             buf.push(0);
         }
+        // Entry data (512 bytes of zeros)
+        buf.extend_from_slice(&[0u8; 512]);
+
         buf
     }
 
     /// Build a minimal valid PBL binary (Unicode, PB12.5 format).
+    /// File layout:
+    ///   0-1023:   HDR* header (Unicode version string)
+    ///               total_entries written at offset 1016 (header_size - 8)
+    ///   1024-1535: data block (zeros)
+    ///   1536-4607: NOD* node block (ENT* entries inside, starting at offset 32)
+    ///   0x2000+:   entry data (DAT* chunks)
     fn build_unicode_pbl(version_str: &str) -> Vec<u8> {
-        let mut buf = vec![0u8; 512];
+        let mut buf: Vec<u8> = vec![0u8; 1024];
         // HDR* magic
         buf[0] = b'H'; buf[1] = b'D'; buf[2] = b'R'; buf[3] = b'*';
         // Unicode version string (little-endian UTF-16)
-        let version = version_str.as_bytes();
-        for (i, &b) in version.iter().enumerate() {
+        let s = version_str.as_bytes();
+        for (i, &b) in s.iter().enumerate() {
             if i * 2 + 1 < 20 {
-                buf[4 + i * 2] = b;      // ASCII byte
-                buf[4 + i * 2 + 1] = 0x00; // high byte (LE)
+                buf[4 + i * 2] = b;
+                buf[4 + i * 2 + 1] = 0x00;
             }
         }
 
-        // Data + node block padding
-        // header_size = 1024 for Unicode
-        buf.extend(&[0u8; 512]); // data block
-        buf.extend(&[0u8; 3584]); // node block area
+        // Write total_entries = 1 at offset 1016 (header_size - 8)
+        let total_entries: u32 = 1;
+        buf[1016] = (total_entries & 0xFF) as u8;
+        buf[1017] = ((total_entries >> 8) & 0xFF) as u8;
+        buf[1018] = ((total_entries >> 16) & 0xFF) as u8;
+        buf[1019] = ((total_entries >> 24) & 0xFF) as u8;
 
-        // Minimal entry (Unicode format)
-        let mut ent = vec![0u8; 512];
-        ent[0] = b'E'; ent[1] = b'N'; ent[2] = b'T'; ent[3] = b'*';
+        // Data block (1024-1535): all zeros
+        buf.extend(&[0u8; 512]);
+
+        // NOD* node block at offset 1536 (header_size + BLOCK_SIZE)
+        let mut nod_block = vec![0u8; NODE_BLOCK_SIZE as usize];
+        // NOD* magic at offset 0
+        nod_block[0] = b'N'; nod_block[1] = b'O'; nod_block[2] = b'D'; nod_block[3] = b'*';
+        // nod_entry_count = 1 at offset 20 (u16 LE)
+        nod_block[20] = 1; nod_block[21] = 0;
+
+        // ENT* entry at offset 32 within NOD* block
+        let ent_start = 32usize;
+        nod_block[ent_start + 0] = b'E';
+        nod_block[ent_start + 1] = b'N';
+        nod_block[ent_start + 2] = b'T';
+        nod_block[ent_start + 3] = b'*';
+        // data_offset = 0x2000 (8192), u32 LE at offset 8
         let data_off: u32 = 0x2000;
-        ent[8]  = (data_off & 0xFF) as u8;
+        nod_block[ent_start + 8]  = (data_off & 0xFF) as u8;
+        nod_block[ent_start + 9]  = ((data_off >> 8) & 0xFF) as u8;
+        nod_block[ent_start + 10] = ((data_off >> 16) & 0xFF) as u8;
+        nod_block[ent_start + 11] = ((data_off >> 24) & 0xFF) as u8;
+        // data_size = 512, u32 LE at offset 12
         let data_sz: u32 = 512;
-        ent[12] = (data_sz & 0xFF) as u8;
+        nod_block[ent_start + 12] = (data_sz & 0xFF) as u8;
+        nod_block[ent_start + 13] = ((data_sz >> 8) & 0xFF) as u8;
+        nod_block[ent_start + 14] = ((data_sz >> 16) & 0xFF) as u8;
+        nod_block[ent_start + 15] = ((data_sz >> 24) & 0xFF) as u8;
+        // timestamp = 100000000 at offset 20 (u32 LE)
         let ts: u32 = 100_000_000;
-        // Unicode: timestamp at offset 20
-        ent[20] = (ts & 0xFF) as u8;
-        ent[21] = ((ts >> 8) & 0xFF) as u8;
-        ent[22] = ((ts >> 16) & 0xFF) as u8;
-        ent[23] = ((ts >> 24) & 0xFF) as u8;
-        // name_len at offset 26
-        let nlen: u16 = 8;
-        ent[26] = (nlen & 0xFF) as u8;
-        ent[27] = ((nlen >> 8) & 0xFF) as u8;
-        // Unicode name "w_main" → little-endian UTF-16
+        nod_block[ent_start + 20] = (ts & 0xFF) as u8;
+        nod_block[ent_start + 21] = ((ts >> 8) & 0xFF) as u8;
+        nod_block[ent_start + 22] = ((ts >> 16) & 0xFF) as u8;
+        nod_block[ent_start + 23] = ((ts >> 24) & 0xFF) as u8;
+        // name_len at offset 26 (u16 LE) — 14 bytes for "w_main" (7 chars × 2)
+        let nlen: u16 = 14;
+        nod_block[ent_start + 26] = (nlen & 0xFF) as u8;
+        nod_block[ent_start + 27] = ((nlen >> 8) & 0xFF) as u8;
+        // Unicode name "w_main" → little-endian UTF-16 at offset 28
         let name = b"w_main";
         for (i, &b) in name.iter().enumerate() {
-            ent[28 + i * 2] = b;
-            ent[28 + i * 2 + 1] = 0x00;
+            nod_block[ent_start + 28 + i * 2] = b;
+            nod_block[ent_start + 28 + i * 2 + 1] = 0x00;
         }
-        buf.extend_from_slice(&ent);
 
-        while buf.len() < 0x2000 + 512 {
+        buf.extend_from_slice(&nod_block);
+
+        // Pad to data_offset (0x2000 = 8192)
+        while buf.len() < 0x2000 as usize {
             buf.push(0);
         }
+        // Entry data (512 bytes of zeros)
+        buf.extend_from_slice(&[0u8; 512]);
+
         buf
     }
 

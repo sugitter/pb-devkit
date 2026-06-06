@@ -40,3 +40,7 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Scaffold residuals (deleted from git but may exist locally due to sandbox restrictions)
+src/app/app.component.html
+src/app/app.component.css

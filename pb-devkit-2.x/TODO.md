@@ -13,6 +13,10 @@
 - [x] 新增 CLI `#[cfg(test)] mod tests` — main.rs 含 2 个占位测试
 - [x] 199/199 测试全部通过，clippy 0 warnings
 - [x] 更新 `README.md` — 版本号 v2.2→v2.2.1，清理 Roadmap 完成项
+- [x] 提交文档更新，推送到 Gitea + GitHub（`df79f65`，三方均同步）
+- [x] **CLI 集成测试补充** — 提取 lib.rs + 37 测试全部通过（unit 16 + integration 21）
+- [x] **GitHub 同步** — 全部 commit 和 v2.2.1 tag 已同步至 GitHub
+- [ ] **PblWriter/PblParser 兼容性** — Writer 生成的 PBL 文件无法被 Parser 识别（已发现，待修复）
 - [x] 提交文档更新，推送到 Gitea + GitHub（`70e4d3f`）
 
 ### 三大核心流程 (架构图验证)
@@ -85,7 +89,6 @@
 
 | 项目 | 状态 | 说明 |
 |------|------|------|
+| PblWriter/PblParser 兼容性 | 🔴 新发现 | Writer 生成 PBL 无法被 Parser 解析（entries 为空）。需排查 ENT* 头/节点树格式 |
 | ORCA 引擎封装 | ⏳ 需外部 DLL | 需要 PBSpyORCA.dll |
-| CLI 集成测试 (tests/) | ⏳ 待创建 | F: 盘沙箱阻止创建目录，已添加 main.rs 占位测试 |
-| GitHub Release v2.2.1 tag | ⏳ 待执行 | tag 和 commit 已就绪，需网络正常时 push |
-| git 二元管理问题 | ⏳ 路径 | bare repo + F: 盘工作区双重管理，依赖 bare repo 提交流程 |
+| git 二元管理脆弱 | 🟡 路径 | bare repo + F: 盘工作区，refs 不一致需手动同步 |
